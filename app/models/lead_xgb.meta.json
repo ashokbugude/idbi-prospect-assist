@@ -1,0 +1,38 @@
+{
+  "version": "1.0",
+  "feature_names": [
+    "log_monthly_income",
+    "log_disposable",
+    "salary_stability_months",
+    "log_avg_balance",
+    "need_spend_ratio",
+    "luxury_spend_ratio",
+    "savings_transfer_ratio",
+    "salary_day_spend_ratio",
+    "debt_to_income_ratio",
+    "monthly_commute_spend",
+    "upi_retail_transactions",
+    "relationship_years",
+    "age",
+    "loan_page_visits_30d",
+    "loan_calculator_uses",
+    "bureau_enquiries_90d",
+    "credit_score_ordinal",
+    "employment_ordinal",
+    "pays_rent",
+    "has_existing_home_loan",
+    "has_auto_emi",
+    "has_consumer_loan",
+    "recent_large_debit",
+    "electronics_shopping_flag",
+    "festival_season_spend_spike",
+    "has_other_bank_accounts",
+    "application_started",
+    "window_shopping_flag"
+  ],
+  "metrics": {
+    "validation_score_mae": 2.22,
+    "validation_tier_accuracy": 0.881,
+    "train_rows": 3200
+  }
+}

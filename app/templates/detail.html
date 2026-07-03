@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ customer.name }} — Prospect Assist AI</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="container">
+    <a class="back-link" href="/">← Back to lead queue</a>
+
+    <header class="detail-header">
+      <div>
+        <span class="badge">Customer Explainability</span>
+        <h1>{{ customer.name }}</h1>
+        <p class="subtitle">
+          {{ customer.customer_id }} · {{ customer.city }} ·
+          {{ customer.employment_type|replace('_', ' ')|title }} ·
+          ₹{{ "{:,}".format(customer.monthly_income) }}/month
+        </p>
+      </div>
+      <div class="detail-tier-wrap">
+        <span class="tier {{ customer.lead_tier_css }}">{{ customer.lead_tier }}</span>
+        <div class="score large">{{ customer.composite_lead_score }}</div>
+        <small>Composite lead score</small>
+      </div>
+    </header>
+
+    <section class="action-banner">
+      <strong>Recommended action:</strong> {{ customer.recommended_action }}
+      {% if customer.scoring_mode %}
+      <span class="mode-badge">{{ customer.scoring_mode|replace('_', ' ') }}</span>
+      {% endif %}
+    </section>
+
+    {% if customer.ml_enhancement and customer.ml_enhancement.enabled %}
+    <section class="ml-section">
+      <h2>ML Enhancement (XGBoost)</h2>
+      <div class="detail-kv wide">
+        <div><span>ML composite</span><strong>{{ customer.ml_enhancement.ml_composite_score }}</strong></div>
+        <div><span>Rule composite</span><strong>{{ customer.rule_composite_score or customer.composite_lead_score }}</strong></div>
+        <div><span>ML tier</span><strong>{{ customer.ml_enhancement.ml_tier }} ({{ customer.ml_enhancement.ml_tier_probability }})</strong></div>
+        <div><span>Nudge applied</span><strong>{{ customer.ml_enhancement.nudge_applied }}</strong></div>
+        <div><span>ML confidence</span><strong>{{ customer.ml_enhancement.ml_confidence }}</strong></div>
+        <div><span>Applied</span><strong>{{ "Yes" if customer.ml_enhancement.applied else "No" }}</strong></div>
+      </div>
+      {% if customer.ml_enhancement.ml_reasons %}
+      <ul class="reasons">
+        {% for reason in customer.ml_enhancement.ml_reasons %}
+        <li>{{ reason }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="dimension-grid">
+      <article class="dimension-card">
+        <h3>Repayment Capacity</h3>
+        <div class="score">{{ customer.repayment_capacity.score }}</div>
+        <ul class="reasons">
+          {% for reason in customer.repayment_capacity.reasons %}
+          <li>{{ reason }}</li>
+          {% endfor %}
+        </ul>
+        <div class="detail-kv">
+          <div><span>Disposable income</span><strong>₹{{ "{:,}".format(customer.repayment_capacity.details.estimated_monthly_disposable) }}</strong></div>
+          <div><span>Affordable EMI est.</span><strong>₹{{ "{:,}".format(customer.repayment_capacity.details.affordable_emi_estimate) }}</strong></div>
+          <div><span>DTI</span><strong>{{ (customer.repayment_capacity.details.debt_to_income_ratio * 100)|round(0) }}%</strong></div>
+        </div>
+      </article>
+
+      <article class="dimension-card">
+        <h3>Purchase Intent</h3>
+        <div class="score">{{ customer.purchase_intent.score }}</div>
+        <ul class="reasons">
+          {% for reason in customer.purchase_intent.reasons %}
+          <li>{{ reason }}</li>
+          {% endfor %}
+        </ul>
+        <div class="detail-kv">
+          <div><span>Loan page visits (30d)</span><strong>{{ customer.purchase_intent.details.loan_page_visits_30d }}</strong></div>
+          <div><span>Calculator uses</span><strong>{{ customer.purchase_intent.details.loan_calculator_uses }}</strong></div>
+          <div><span>Application started</span><strong>{{ "Yes" if customer.purchase_intent.details.application_started else "No" }}</strong></div>
+        </div>
+      </article>
+
+      <article class="dimension-card">
+        <h3>Behavioral Discipline</h3>
+        <div class="score">{{ customer.behavioral_discipline.score }}</div>
+        <ul class="reasons">
+          {% for reason in customer.behavioral_discipline.reasons %}
+          <li>{{ reason }}</li>
+          {% endfor %}
+        </ul>
+        <div class="detail-kv">
+          <div><span>Day-1 salary spend</span><strong>{{ (customer.behavioral_discipline.details.salary_day_spend_ratio * 100)|round(0) }}%</strong></div>
+          <div><span>Spend mix</span><strong>{{ customer.behavioral_discipline.details.need_vs_luxury }}</strong></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="product-section">
+      <h2>Product Match Ranking</h2>
+      <div class="product-grid">
+        {% for p in customer.all_scores %}
+        <div class="product-card {% if loop.first %}top{% endif %}">
+          <h4>{{ p.label }}</h4>
+          <div class="score">{{ p.score }}</div>
+          <ul class="reasons">
+            {% for reason in p.reasons %}
+            <li>{{ reason }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="raw-section">
+      <h2>Transaction Signals (synthetic)</h2>
+      <div class="detail-kv wide">
+        <div><span>Savings transfer ratio</span><strong>{{ (raw.savings_transfer_ratio * 100)|round(0) }}%</strong></div>
+        <div><span>Other bank accounts</span><strong>{{ "Yes" if raw.has_other_bank_accounts else "No" }}</strong></div>
+        <div><span>Bureau enquiries (90d)</span><strong>{{ raw.bureau_enquiries_90d }}</strong></div>
+        <div><span>Credit band</span><strong>{{ raw.credit_score_band }}</strong></div>
+        <div><span>Window shopping flag</span><strong>{{ "Yes" if raw.window_shopping_flag else "No" }}</strong></div>
+        <div><span>Relationship years</span><strong>{{ raw.relationship_years }}</strong></div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
