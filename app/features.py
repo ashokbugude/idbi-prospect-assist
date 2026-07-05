@@ -98,20 +98,6 @@ def extract_features(customer: dict) -> list[float]:
     bureau = customer.get("bureau_analysis", {})
     upi = customer.get("upi_behavior", {})
 
-    bools = [
-        customer.get("pays_rent", False),
-        customer.get("has_existing_home_loan", False),
-        customer.get("has_auto_emi", False),
-        customer.get("has_consumer_loan", False),
-        customer.get("recent_large_debit", False),
-        customer.get("electronics_shopping_flag", False),
-        customer.get("festival_season_spend_spike", False),
-        customer.get("has_other_bank_accounts", False),
-        customer.get("has_mortgage", False),
-        customer.get("application_started", False),
-        customer.get("window_shopping_flag", False),
-    ]
-
     return [
         _log1p(income),
         _log1p(disposable),
@@ -134,10 +120,20 @@ def extract_features(customer: dict) -> list[float]:
         float(EMPLOYMENT_ORDINAL.get(customer.get("employment_type", "salaried"), 0)),
         float(upi.get("discipline_hint", 50)),
         float(upi.get("merchant_diversity_score", 0.5)),
+        1.0 if customer.get("pays_rent", False) else 0.0,
+        1.0 if customer.get("has_existing_home_loan", False) else 0.0,
+        1.0 if customer.get("has_auto_emi", False) else 0.0,
+        1.0 if customer.get("has_consumer_loan", False) else 0.0,
+        1.0 if customer.get("recent_large_debit", False) else 0.0,
+        1.0 if customer.get("electronics_shopping_flag", False) else 0.0,
+        1.0 if customer.get("festival_season_spend_spike", False) else 0.0,
+        1.0 if customer.get("has_other_bank_accounts", False) else 0.0,
         float(customer.get("multi_bank_income_share", 0)),
         float(customer.get("geo_transaction_consistency", 0.7)),
         float(customer.get("avg_session_minutes", 0)),
-        *[1.0 if b else 0.0 for b in bools],
+        1.0 if customer.get("has_mortgage", False) else 0.0,
+        1.0 if customer.get("application_started", False) else 0.0,
+        1.0 if customer.get("window_shopping_flag", False) else 0.0,
     ]
 
 

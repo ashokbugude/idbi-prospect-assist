@@ -2,29 +2,46 @@
 
 Track **02** prototype for **IDBI Innovate 2026** — behavioral lead intelligence for existing IDBI liability customers.
 
-## What it does (v0.6.1)
+## What it does (v0.7.0)
 
 Addresses IDBI's stated pain: **~1% lead conversion** with too many window-shoppers wasting RM time.
+
+**RM login:** `/login` — demo PIN `idbi2026` (override via `RM_DEMO_PIN` env)
 
 | Dimension | Purpose |
 |-----------|---------|
 | **Repayment Capacity** | Disposable income, bureau profile, txn-inferred + multi-bank holistic income |
 | **Purchase Intent** | Session depth, calculator usage, application started, window-shopping filter |
-| **Behavioral Discipline** | Day-1 salary spend, UPI merchant mix, need vs luxury |
+| **Behavioral Discipline** | Day-1 salary spend, UPI merchant mix, need vs want vs luxury |
 | **Delinquency Safety** | 12-month stress signal wired into composite score and tiering |
 | **Lead Tiers** | Quality Lead → Serious → Interested → Window-shop Risk |
 | **Product Match** | Home, Mortgage, Auto, Personal, Consumer Durable |
+| **GenAI RM Brief** | AI-assisted call script per customer (Srishti GenAI) |
+| **Account Aggregator** | Simulated AA consent → fetch other-bank statements → rescore |
 
 ## Pages
 
 | URL | Purpose |
 |-----|---------|
-| `/` | RM dashboard + priority queue |
-| `/customer/{id}` | Full explainability (bureau, UPI, delinquency, ML contributions) |
-| `/impact` | Business impact + Monte Carlo backtest + scenarios |
+| `/` | RM dashboard + priority queue + Before/After demo toggle |
+| `/login` | RM PIN gate (demo: `idbi2026`) |
+| `/customer/{id}` | Explainability + GenAI brief + txn timeline + PDF export |
+| `/impact` | Business impact + pilot plan + Monte Carlo backtest |
 | `/ml` | ML credibility report (R², confusion matrix, rules vs hybrid) |
-| `/multi-bank` | Cross-bank income comparison + statement upload simulation |
-| `/architecture` | System design + ML model card |
+| `/multi-bank` | AA flow + cross-bank income + statement upload |
+| `/architecture` | AWS diagram + compliance + pilot KPIs |
+
+## Judge quick start
+
+| Item | Value |
+|------|--------|
+| **Login** | `/login` → PIN `idbi2026` |
+| **Public API** | `/api/health` · `/api/impact` · `/api/sandbox/IDBI-L10010` |
+| **Hero Quality Lead** | `/customer/IDBI-L10010` (Vikram Singh) |
+| **Hero window shopper** | `/customer/IDBI-L10121` (Rahul Sharma) |
+| **Hero multi-bank** | `/customer/IDBI-L10033` (Vikram Menon) |
+
+See `docs/AMA_ALIGNMENT.md` for full Track 02 traceability.
 
 ## Quick start
 
@@ -44,7 +61,7 @@ python scripts/train_model.py
 python scripts/compare_scoring.py
 ```
 
-- **34 features** including bureau score, UPI discipline, geo, multi-bank
+- **35 features** including bureau score, UPI discipline, geo, multi-bank
 - Safe hybrid: ±8 pt nudge max; never demotes Quality Leads
 - Model card: `GET /api/ml/model-card`
 
@@ -54,6 +71,7 @@ python scripts/compare_scoring.py
 pip install -r requirements-dev.txt
 python -m pytest tests/ -v
 python scripts/validate.py
+python scripts/benchmark.py
 ```
 
 ## Key APIs
@@ -66,8 +84,11 @@ python scripts/validate.py
 | `GET /api/ml/evaluation` | Full ML credibility package |
 | `GET /api/impact/backtest` | Monte Carlo conversion backtest |
 | `GET /api/rm-queue/export` | CSV for RM outreach |
-| `POST /api/multi-bank/analyze` | Simulate other-bank statement upload |
-| `GET /api/sandbox/{id}` | Post-shortlist IDBI API stub |
+| `POST /api/aa/consent` | Account Aggregator consent simulation |
+| `POST /api/aa/fetch` | AA fetch statements + auto-rescore |
+| `GET /api/customer/{id}/rm-brief` | GenAI RM call brief |
+| `GET /api/customer/{id}/underwriter-pdf` | Underwriter packet PDF |
+| `GET /api/demo-comparison` | Before/After conversion comparison |
 
 ## Hackathon submission (Jul 9)
 

@@ -1,158 +1,206 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IDBI Prospect Assist AI</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <div class="container">
-    <header>
-      <div>
-        <span class="badge">IDBI Innovate 2026 · Track 02</span>
-        <h1>Prospect Assist AI</h1>
-        <p class="subtitle">
-          Behavioral lead intelligence for existing IDBI liability customers. Scores repayment capacity,
-          purchase intent, and financial discipline — then tiers leads so RMs focus on quality prospects
-          instead of ~1% converting window shoppers.
-        </p>
-      </div>
-      <nav class="top-nav">
-        <a href="/impact">Impact</a>
-        <a href="/ml">ML Report</a>
-        <a href="/multi-bank">Multi-bank</a>
-        <a href="/architecture">Architecture</a>
-        <a href="/api/rm-queue/export">Export RM CSV</a>
-      </nav>
-    </header>
+{% extends "base.html" %}
+{% block title %}Dashboard — IDBI Prospect Assist AI{% endblock %}
 
-    <section class="stats stats-5">
-      <div class="stat-card">
-        <div class="label">In Pipeline</div>
-        <div class="value">{{ stats.total }}</div>
-      </div>
-      <div class="stat-card highlight-green">
-        <div class="label">Quality Leads</div>
-        <div class="value">{{ stats.quality_leads }}</div>
-      </div>
-      <div class="stat-card highlight-blue">
-        <div class="label">Serious</div>
-        <div class="value">{{ stats.serious }}</div>
-      </div>
-      <div class="stat-card highlight-red">
-        <div class="label">Window-shop Risk</div>
-        <div class="value">{{ stats.window_shop }}</div>
-      </div>
-      <div class="stat-card highlight-teal">
-        <div class="label">Multi-bank View</div>
-        <div class="value">{{ stats.multi_bank }}</div>
-      </div>
-    </section>
+{% block content %}
+<div class="page-hero">
+  <span class="badge">IDBI Innovate 2026 · Track 02</span>
+  <h1>Prospect Assist AI</h1>
+  <p class="subtitle">
+    Behavioral lead intelligence for existing IDBI liability customers. Scores repayment capacity,
+    purchase intent, and financial discipline — then tiers leads so RMs focus on quality prospects
+    instead of ~1% converting window shoppers.
+  </p>
+</div>
 
-    <p class="insight-banner">
-      {{ stats.conversion_story }}
-      {% if stats.meets_track02_target %}
-      <span class="target-met">✓ Track 02 target met</span>
-      {% endif %}
-      · RM time saved: ~{{ stats.rm_time_saved_pct }}%
-    </p>
-
-    <section class="rm-queue-section">
-      <h2>Today's RM Priority Queue</h2>
-      <p class="section-note">Quality + Serious leads only — {{ stats.rm_queue }} customers ready for outreach</p>
-      <div class="rm-queue-grid">
-        {% for c in rm_queue %}
-        <a class="rm-card" href="/customer/{{ c.customer_id }}">
-          <span class="tier {{ c.lead_tier_css }}">{{ c.lead_tier }}</span>
-          <strong>{{ c.name }}</strong>
-          <small>{{ c.top_product_label }} · Score {{ c.composite_lead_score }}</small>
-        </a>
-        {% endfor %}
-      </div>
-    </section>
-
-    <form class="filters" method="get">
-      <label>
-        Lead tier
-        <select name="tier">
-          <option value="">All tiers</option>
-          {% for t in lead_tiers %}
-          <option value="{{ t }}" {% if selected_tier == t %}selected{% endif %}>{{ t }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>
-        Product focus
-        <select name="product">
-          <option value="">All products</option>
-          {% for key, label in products.items() %}
-          <option value="{{ key }}" {% if selected_product == key %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>
-        Min composite score
-        <input type="number" name="min_score" min="0" max="100" value="{{ min_score }}" />
-      </label>
-      <label class="checkbox-label">
-        <input type="checkbox" name="multi_bank" value="true" {% if multi_bank %}checked{% endif %} />
-        Multi-bank customers only
-      </label>
-      <button type="submit">Apply filters</button>
-    </form>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th>Lead Tier</th>
-            <th>Composite</th>
-            <th>Repay / Intent / Discipline</th>
-            <th>Top Offer</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for customer in customers %}
-          <tr>
-            <td>
-              <a class="customer-link" href="/customer/{{ customer.customer_id }}">
-                <strong>{{ customer.name }}</strong>
-              </a><br />
-              <small>{{ customer.customer_id }} · {{ customer.city }}</small><br />
-              <small>{{ customer.employment_type|replace('_', ' ')|title }} · ₹{{ "{:,}".format(customer.monthly_income) }}/mo</small>
-              {% if customer.inferred_monthly_income and customer.inferred_monthly_income != customer.monthly_income %}
-              <br /><small class="inferred-tag">Inferred ₹{{ "{:,}".format(customer.inferred_monthly_income) }}/mo</small>
-              {% endif %}
-              {% if customer.has_other_bank_accounts %}
-              <br /><small class="multi-bank-tag">Multi-bank holistic view</small>
-              {% endif %}
-            </td>
-            <td>
-              <span class="tier {{ customer.lead_tier_css }}">{{ customer.lead_tier }}</span>
-            </td>
-            <td><span class="score">{{ customer.composite_lead_score }}</span></td>
-            <td>
-              <div class="mini-scores">
-                <span title="Repayment">R {{ customer.repayment_capacity.score }}</span>
-                <span title="Intent">I {{ customer.purchase_intent.score }}</span>
-                <span title="Discipline">D {{ customer.behavioral_discipline.score }}</span>
-              </div>
-            </td>
-            <td>{{ customer.display_product_label or customer.top_product_label }}</td>
-            <td class="action-cell">{{ customer.recommended_action }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <footer>
-      Prototype v0.5 — Hybrid rules + XGBoost · <a href="/architecture">Architecture</a> ·
-      <a href="/api/sandbox/IDBI-L00001">Sandbox API stub</a>
-    </footer>
+<section class="stats stats-5">
+  <div class="stat-card">
+    <div class="label">In Pipeline</div>
+    <div class="value">{{ stats.total }}</div>
   </div>
-</body>
-</html>
+  <div class="stat-card highlight-green">
+    <div class="label">Quality Leads</div>
+    <div class="value">{{ stats.quality_leads }}</div>
+  </div>
+  <div class="stat-card highlight-orange">
+    <div class="label">Serious</div>
+    <div class="value">{{ stats.serious }}</div>
+  </div>
+  <div class="stat-card highlight-red">
+    <div class="label">Window-shop Risk</div>
+    <div class="value">{{ stats.window_shop }}</div>
+  </div>
+  <div class="stat-card highlight-teal">
+    <div class="label">Multi-bank View</div>
+    <div class="value">{{ stats.multi_bank }}</div>
+  </div>
+</section>
+
+<p class="insight-banner" id="conversion-banner">
+  {{ stats.conversion_story }}
+  {% if stats.meets_track02_target %}
+  <span class="target-met">✓ Track 02 target met</span>
+  {% endif %}
+  · RM time saved: ~{{ stats.rm_time_saved_pct }}%
+</p>
+
+<section class="arch-section digital-section">
+  <h2>Digital Clickstream Signals</h2>
+  <p class="section-note">AMA: separate browsing from serious purchase intent using session depth and calculator usage.</p>
+  <div class="stats stats-3">
+    <div class="stat-card">
+      <div class="label">Avg Session (min)</div>
+      <div class="value">{{ stats.digital_avg_session }}</div>
+    </div>
+    <div class="stat-card highlight-orange">
+      <div class="label">Used EMI Calculator</div>
+      <div class="value">{{ stats.digital_calc_pct }}%</div>
+    </div>
+    <div class="stat-card highlight-green">
+      <div class="label">Application Started</div>
+      <div class="value">{{ stats.digital_app_started_pct }}%</div>
+    </div>
+  </div>
+</section>
+
+<section class="arch-section hero-links-section">
+  <h2>Judge Quick Start — Hero Customers</h2>
+  <p class="section-note">Bookmark these for the 2-minute demo (seed=42 dataset).</p>
+  <div class="hero-links">
+    <a class="rm-card" href="/customer/{{ hero_customers.quality_lead }}">Quality Lead — {{ hero_customers.quality_lead }}</a>
+    <a class="rm-card" href="/customer/{{ hero_customers.window_shopper }}">Window Shopper — {{ hero_customers.window_shopper }}</a>
+    <a class="rm-card" href="/customer/{{ hero_customers.multibank_uplift }}">Multi-bank — {{ hero_customers.multibank_uplift }}</a>
+  </div>
+</section>
+
+<section class="demo-mode-section arch-section">
+  <h2>Before / After Demo</h2>
+  <p class="section-note">Toggle to compare spray-and-pray vs RM-prioritized outreach for judges.</p>
+  <div class="demo-toggle">
+    <button type="button" class="demo-btn active" data-mode="after">After — RM Queue</button>
+    <button type="button" class="demo-btn" data-mode="before">Before — All Leads</button>
+  </div>
+  <div class="stats stats-4" id="demo-stats">
+    <div class="stat-card">
+      <div class="label">Conversion</div>
+      <div class="value" id="demo-conversion">{{ stats.rm_queue_conversion_pct }}%</div>
+    </div>
+    <div class="stat-card highlight-green">
+      <div class="label">Quality Segment</div>
+      <div class="value" id="demo-quality">{{ stats.quality_lead_conversion_pct }}%</div>
+    </div>
+    <div class="stat-card highlight-orange">
+      <div class="label">RM Calls</div>
+      <div class="value" id="demo-rm-pct">{{ stats.rm_queue_pct }}%</div>
+    </div>
+    <div class="stat-card highlight-teal">
+      <div class="label">Time Saved</div>
+      <div class="value" id="demo-time-saved">{{ stats.rm_time_saved_pct }}%</div>
+    </div>
+  </div>
+</section>
+
+<section class="rm-queue-section">
+  <h2>Today's RM Priority Queue</h2>
+  <p class="section-note">Quality + Serious leads only — {{ stats.rm_queue }} customers ready for outreach</p>
+  <div class="rm-queue-grid">
+    {% for c in rm_queue %}
+    <a class="rm-card" href="/customer/{{ c.customer_id }}">
+      <span class="tier {{ c.lead_tier_css }}">{{ c.lead_tier }}</span>
+      <strong>{{ c.name }}</strong>
+      <small>{{ c.top_product_label }} · Score {{ c.composite_lead_score }}</small>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<form class="filters" method="get">
+  <label>
+    Lead tier
+    <select name="tier">
+      <option value="">All tiers</option>
+      {% for t in lead_tiers %}
+      <option value="{{ t }}" {% if selected_tier == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Product focus
+    <select name="product">
+      <option value="">All products</option>
+      {% for key, label in products.items() %}
+      <option value="{{ key }}" {% if selected_product == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    Min composite score
+    <input type="number" name="min_score" min="0" max="100" value="{{ min_score }}" />
+  </label>
+  <label class="checkbox-label">
+    <input type="checkbox" name="multi_bank" value="true" {% if multi_bank %}checked{% endif %} />
+    Multi-bank customers only
+  </label>
+  <button type="submit">Apply filters</button>
+</form>
+
+<div id="dashboard-table-panel" class="dashboard-table-panel">
+  {% include "index_table_partial.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const panel = document.getElementById('dashboard-table-panel');
+  if (!panel) return;
+
+  function partialUrl(search) {
+    return '/partials/dashboard-table' + (search || window.location.search);
+  }
+
+  async function loadTable(search, pushHistory) {
+    panel.classList.add('is-loading');
+    try {
+      const res = await fetch(partialUrl(search));
+      if (!res.ok) throw new Error('Failed to load table');
+      panel.innerHTML = await res.text();
+      if (pushHistory) {
+        history.pushState({ dashboardTable: true }, '', '/' + (search || ''));
+      }
+    } finally {
+      panel.classList.remove('is-loading');
+    }
+  }
+
+  panel.addEventListener('click', function (e) {
+    const link = e.target.closest('a.page-link-ajax');
+    if (!link) return;
+    e.preventDefault();
+    loadTable(link.getAttribute('href'), true);
+  });
+
+  window.addEventListener('popstate', function () {
+    if (window.location.pathname !== '/') return;
+    loadTable(window.location.search, false);
+  });
+})();
+
+(function () {
+  fetch('/api/demo-comparison').then((r) => r.json()).then((data) => {
+    const btns = document.querySelectorAll('.demo-btn');
+    const setMode = (mode) => {
+      btns.forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
+      const d = mode === 'before' ? data.before : data.after;
+      document.getElementById('demo-conversion').textContent = d.conversion_pct + '%';
+      document.getElementById('demo-quality').textContent =
+        (d.quality_segment_pct || data.after.quality_segment_pct) + '%';
+      document.getElementById('demo-rm-pct').textContent = (d.rm_calls_pct || 100) + '%';
+      document.getElementById('demo-time-saved').textContent =
+        (mode === 'before' ? '0' : data.after.rm_time_saved_pct) + '%';
+    };
+    btns.forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+    setMode('after');
+  });
+})();
+</script>
+{% endblock %}

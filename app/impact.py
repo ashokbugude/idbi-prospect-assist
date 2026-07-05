@@ -216,9 +216,28 @@ def compute_business_impact(customers: list[dict]) -> dict:
             "baseline": "IDBI stated ~1% conversion on undifferentiated liability leads (orientation AMA)",
             "quality_target": f"Track 02 Hack2skill expected outcome: >{TARGET_QUALITY_CONVERSION_PCT}% on quality leads",
             "tier_rates": {k: f"{v * 100:.1f}%" for k, v in TIER_CONVERSION_RATES.items()},
-            "rm_strategy": "RMs contact Quality + Serious only; Window-shop deprioritized",
+            "tier_rates_note": (
+                "SIMULATION ASSUMPTIONS — industry-informed tier close rates, not IDBI pilot outcomes. "
+                "To be validated in 4-week RM callback A/B (Quality vs control cohort)."
+            ),
+            "rm_strategy": "RMs contact Quality + Serious only (~20–30% of leads); Window-shop deprioritized",
             "quality_formula": "base 32% + score adjustment from composite (capped 45%)",
             "backtest": backtest["methodology"],
-            "disclaimer": "POC projection model — validate with pilot A/B on live RM callbacks post-shortlist",
+            "disclaimer": (
+                "POC projection model — assumptions documented for judge transparency. "
+                "Pilot validation plan: A/B RM callbacks on Quality leads vs spray-and-pray control."
+            ),
+        },
+        "pilot_validation_plan": {
+            "duration_weeks": 4,
+            "design": "Randomized RM callback A/B — Quality+Serious queue vs undifferentiated control",
+            "primary_kpi": f"Quality segment conversion >= {TARGET_QUALITY_CONVERSION_PCT}%",
+            "secondary_kpis": [
+                "RM hours per booked loan",
+                "Callback-to-application rate",
+                "Window-shop false-positive rate",
+            ],
+            "success_criteria": "Statistically significant lift vs 1% baseline with p<0.05 on n>=500 leads",
+            "data_source_post_shortlist": "IDBI AWS sandbox — transactions, bureau, digital footprint APIs",
         },
     }

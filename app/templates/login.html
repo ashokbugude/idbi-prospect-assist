@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}RM Login — IDBI Prospect Assist AI{% endblock %}
+
+{% block content %}
+<div class="login-panel">
+  <span class="badge">RM Secure Access</span>
+  <h1>Prospect Assist AI</h1>
+  <p class="subtitle">Enter your demo RM PIN to access the lead intelligence dashboard.</p>
+  {% if request.query_params.get('error') %}
+  <p class="insight-banner error-banner">Invalid PIN — try again.</p>
+  {% endif %}
+  <form class="filters login-form" method="post" action="/login">
+    <label>
+      RM PIN
+      <input type="password" name="pin" placeholder="Demo PIN" required autofocus />
+    </label>
+    <button type="submit">Sign in</button>
+  </form>
+  <p class="section-note">Demo PIN for judges: <code>idbi2026</code></p>
+</div>
+{% endblock %}

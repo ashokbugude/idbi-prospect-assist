@@ -1,91 +1,245 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Multi-bank Analysis — Prospect Assist AI</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <div class="container">
-    <a class="back-link" href="/">← Back to dashboard</a>
+{% extends "base.html" %}
+{% block title %}Multi-bank Analysis — IDBI Prospect Assist AI{% endblock %}
 
-    <header>
-      <span class="badge">Holistic Income</span>
-      <h1>Multi-bank Analysis</h1>
-      <p class="subtitle">
-        Cross-bank statement view — compare IDBI stated income vs inferred vs holistic repayment capacity (AMA requirement).
-      </p>
-    </header>
+{% block content %}
+<div class="page-hero">
+  <span class="badge">Holistic Income</span>
+  <h1>Multi-bank Analysis</h1>
+  <p class="subtitle">
+    Cross-bank statement view — compare IDBI stated income vs inferred vs holistic repayment capacity (AMA requirement).
+  </p>
+</div>
 
-    <section class="arch-section upload-section">
-      <h2>Simulate Other-Bank Statement Upload</h2>
-      <form class="filters" id="multibank-form">
-        <label>
-          Customer ID
-          <select name="customer_id" required>
-            {% for c in all_customers %}
-            {% if c.has_other_bank_accounts %}
-            <option value="{{ c.customer_id }}">{{ c.customer_id }} — {{ c.name }}</option>
-            {% endif %}
-            {% endfor %}
-          </select>
-        </label>
-        <label>
-          Other bank monthly inflow (₹)
-          <input type="number" name="other_bank_monthly_inflow" min="0" step="1000" placeholder="e.g. 45000" required />
-        </label>
-        <button type="submit">Analyze &amp; Re-score</button>
-      </form>
-      <pre id="multibank-result" class="arch-diagram" hidden></pre>
-    </section>
+<section class="arch-section aa-section">
+  <h2>Account Aggregator (AA) Flow</h2>
+  <p class="section-note">Simulate RBI AA consent → fetch other-bank statements → auto-rescore (no manual inflow entry).</p>
+  <form class="filters" id="aa-form">
+    <label>
+      Customer ID
+      <select name="customer_id" required>
+        {% for c in all_customers %}
+        {% if c.has_other_bank_accounts %}
+        <option value="{{ c.customer_id }}">{{ c.customer_id }} — {{ c.name }}</option>
+        {% endif %}
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Grant AA Consent &amp; Fetch Statements</button>
+  </form>
+  <div id="aa-result" class="multibank-result" hidden></div>
+</section>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Customer</th>
-            <th>Tier</th>
-            <th>Stated</th>
-            <th>IDBI Inferred</th>
-            <th>Holistic</th>
-            <th>EMI Uplift</th>
-            <th>Detail</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for c in customers %}
-          <tr>
-            <td>
-              <strong>{{ c.name }}</strong><br />
-              <small>{{ c.customer_id }}</small>
-            </td>
-            <td><span class="tier {{ c.lead_tier_css }}">{{ c.lead_tier }}</span></td>
-            <td>₹{{ "{:,}".format(c.monthly_income) }}</td>
-            <td>₹{{ "{:,}".format(c.inferred_monthly_income or c.monthly_income) }}</td>
-            <td>₹{{ "{:,}".format(c.holistic_monthly_income or c.inferred_monthly_income or c.monthly_income) }}</td>
-            <td>
-              {% if c.multibank_analysis %}
-              +{{ c.multibank_analysis.emi_uplift_pct }}%
-              {% else %}—{% endif %}
-            </td>
-            <td><a href="/customer/{{ c.customer_id }}">View</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <script>
-    document.getElementById('multibank-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
+<section class="arch-section upload-section">
+  <h2>Manual Statement Upload (fallback)</h2>
+  <form class="filters" id="multibank-form">
+    <label>
+      Customer ID
+      <select name="customer_id" required>
+        {% for c in all_customers %}
+        {% if c.has_other_bank_accounts %}
+        <option value="{{ c.customer_id }}">{{ c.customer_id }} — {{ c.name }}</option>
+        {% endif %}
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Other bank monthly inflow (₹)
+      <input type="number" name="other_bank_monthly_inflow" min="0" step="1000" placeholder="e.g. 45000" required />
+    </label>
+    <button type="submit">Analyze &amp; Re-score</button>
+  </form>
+  <div id="multibank-result" class="multibank-result" hidden></div>
+</section>
+
+<div id="multibank-table-panel" class="dashboard-table-panel">
+  {% include "multi_bank_table_partial.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function formatInr(value) {
+    if (value == null || Number.isNaN(Number(value))) return '—';
+    return '₹' + Number(value).toLocaleString('en-IN');
+  }
+
+  function formatLabel(key) {
+    return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  function renderTierChange(p) {
+    if (!p.previous_tier) return '';
+    const changed = p.tier_changed || p.previous_tier !== p.lead_tier;
+    if (!changed) {
+      return `<p class="section-note">Lead tier unchanged after holistic income update: <strong>${p.lead_tier}</strong></p>`;
+    }
+    return `
+      <p class="insight-banner target-met-banner tier-change-banner">
+        Tier movement:
+        <span class="tier ${p.previous_tier_css || ''}">${p.previous_tier}</span>
+        &rarr;
+        <span class="tier ${p.lead_tier_css || ''}">${p.lead_tier}</span>
+        &nbsp;·&nbsp; Score ${p.previous_composite_lead_score} &rarr; ${p.composite_lead_score}
+      </p>`;
+  }
+
+  function renderMultibankResult(data) {
+    const a = data.multibank_analysis || {};
+    const p = data.rescored_profile || {};
+    const reasons = (a.reasons || []).map((r) => `<li>${r}</li>`).join('');
+
+    return `
+      <h3>Analysis Results — ${data.customer_id}</h3>
+      ${renderTierChange(p)}
+
+      <section class="arch-section multibank-result-section">
+        <h4>Income Comparison</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Metric</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>IDBI stated income</td><td>${formatInr(a.idbi_stated_income)}</td></tr>
+              <tr><td>IDBI inferred income</td><td>${formatInr(a.idbi_inferred_income)}</td></tr>
+              <tr><td>Other-bank monthly inflow</td><td>${formatInr(a.other_bank_monthly_inflow)}</td></tr>
+              <tr><td>Holistic monthly income</td><td><strong>${formatInr(a.holistic_monthly_income)}</strong></td></tr>
+              <tr><td>Hidden income detected</td><td>${formatInr(a.hidden_income_detected)}</td></tr>
+              <tr><td>Coverage gap</td><td>${a.coverage_gap_pct ?? '—'}%</td></tr>
+              <tr><td>Income source</td><td>${formatLabel(a.income_source || '')}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="arch-section multibank-result-section">
+        <h4>EMI Capacity</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Metric</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Affordable EMI (IDBI only)</td><td>${formatInr(a.affordable_emi_idbi_only)}</td></tr>
+              <tr><td>Affordable EMI (holistic)</td><td><strong>${formatInr(a.affordable_emi_holistic)}</strong></td></tr>
+              <tr><td>EMI uplift</td><td class="uplift-cell">+${a.emi_uplift_pct ?? '—'}%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="arch-section multibank-result-section">
+        <h4>Re-scored Profile</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Metric</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Lead tier</td>
+                <td><span class="tier ${p.lead_tier_css || ''}">${p.lead_tier || '—'}</span></td>
+              </tr>
+              <tr><td>Composite lead score</td><td><span class="score">${p.composite_lead_score ?? '—'}</span></td></tr>
+              <tr><td>Affordable EMI estimate</td><td>${formatInr(p.affordable_emi_estimate)}</td></tr>
+              <tr><td>Holistic monthly income</td><td>${formatInr(p.holistic_monthly_income)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      ${reasons ? `<section class="arch-section multibank-result-section"><h4>Key Insights</h4><ul class="reasons">${reasons}</ul></section>` : ''}
+    `;
+  }
+
+  document.getElementById('aa-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const el = document.getElementById('aa-result');
+    el.hidden = false;
+    el.classList.add('is-loading');
+    el.innerHTML = '<p class="section-note">Initiating AA consent…</p>';
+    try {
+      const fd = new FormData(e.target);
+      const customerId = fd.get('customer_id');
+      const consentRes = await fetch('/api/aa/consent', { method: 'POST', body: fd });
+      const consent = await consentRes.json();
+      if (!consentRes.ok) throw new Error(consent.error || 'Consent failed');
+      el.innerHTML = `<p class="section-note">Consent ${consent.consent_id} — fetching statements from ${consent.fip_ids.join(', ')}…</p>`;
+      const fetchFd = new FormData();
+      fetchFd.set('customer_id', customerId);
+      fetchFd.set('consent_id', consent.consent_id);
+      const fetchRes = await fetch('/api/aa/fetch', { method: 'POST', body: fetchFd });
+      const data = await fetchRes.json();
+      if (!fetchRes.ok) throw new Error(data.error || 'Fetch failed');
+      el.innerHTML = renderMultibankResult({
+        customer_id: customerId,
+        multibank_analysis: data.multibank_analysis,
+        rescored_profile: data.rescored_profile,
+      }) + `<p class="section-note">${consent.dpdp_notice}</p>`;
+    } catch (err) {
+      el.innerHTML = `<p class="insight-banner error-banner">${err.message}</p>`;
+    } finally {
+      el.classList.remove('is-loading');
+    }
+  });
+
+  document.getElementById('multibank-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const el = document.getElementById('multibank-result');
+    el.hidden = false;
+    el.classList.add('is-loading');
+    el.innerHTML = '<p class="section-note">Analyzing cross-bank income…</p>';
+
+    try {
       const fd = new FormData(e.target);
       const res = await fetch('/api/multi-bank/analyze', { method: 'POST', body: fd });
       const data = await res.json();
-      const el = document.getElementById('multibank-result');
-      el.hidden = false;
-      el.textContent = JSON.stringify(data, null, 2);
+      if (!res.ok) {
+        el.innerHTML = `<p class="insight-banner error-banner">${data.error || 'Analysis failed'}</p>`;
+        return;
+      }
+      el.innerHTML = renderMultibankResult(data);
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch {
+      el.innerHTML = '<p class="insight-banner error-banner">Could not reach analysis service.</p>';
+    } finally {
+      el.classList.remove('is-loading');
+    }
+  });
+
+  (function () {
+    const panel = document.getElementById('multibank-table-panel');
+    if (!panel) return;
+
+    function partialUrl(search) {
+      return '/partials/multi-bank-table' + (search || window.location.search);
+    }
+
+    async function loadTable(search, pushHistory) {
+      panel.classList.add('is-loading');
+      try {
+        const res = await fetch(partialUrl(search));
+        if (!res.ok) throw new Error('Failed to load table');
+        panel.innerHTML = await res.text();
+        if (pushHistory) {
+          history.pushState({ multibankTable: true }, '', '/multi-bank' + (search || ''));
+        }
+      } finally {
+        panel.classList.remove('is-loading');
+      }
+    }
+
+    panel.addEventListener('click', function (e) {
+      const link = e.target.closest('a.page-link-ajax');
+      if (!link) return;
+      e.preventDefault();
+      loadTable(link.getAttribute('href'), true);
     });
-  </script>
-</body>
-</html>
+
+    window.addEventListener('popstate', function () {
+      if (window.location.pathname !== '/multi-bank') return;
+      loadTable(window.location.search, false);
+    });
+  })();
+</script>
+{% endblock %}

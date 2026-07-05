@@ -69,8 +69,12 @@ def main() -> int:
             errors.append(f"{c['customer_id']}: composite out of range")
 
     rm_queue = sum(1 for c in ranked if c.get("rm_call_eligible"))
-    if rm_queue < 5:
-        warnings.append(f"RM queue only {rm_queue} leads — may look thin in demo")
+    rm_pct = rm_queue / len(ranked) * 100 if ranked else 0
+    if rm_pct < 20 or rm_pct > 35:
+        warnings.append(f"RM queue {rm_pct:.1f}% — target 20-35% for pitch consistency")
+    window_pct = impact.get("window_shop_filtered_pct", 0)
+    if window_pct < 20:
+        warnings.append(f"Window-shop only {window_pct}% — target 25-35% for realism")
 
     print("=== IDBI Prospect Assist AI — Validation ===")
     print(f"Customers scored: {len(ranked)}")

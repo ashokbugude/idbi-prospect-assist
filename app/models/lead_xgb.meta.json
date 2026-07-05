@@ -38,23 +38,23 @@
     "window_shopping_flag"
   ],
   "metrics": {
-    "validation_score_mae": 2.32,
-    "validation_score_r2": 0.952,
-    "validation_tier_accuracy": 0.802,
+    "validation_score_mae": 1.89,
+    "validation_score_r2": 0.99,
+    "validation_tier_accuracy": 0.944,
     "train_rows": 3200,
     "validation_rows": 800,
     "validation_split": "80/20 stratified by tier",
     "tier_precision": {
-      "Quality Lead": 0.848,
-      "Serious": 0.725,
-      "Interested": 0.838,
-      "Window-shop Risk": 1.0
+      "Quality Lead": 0.947,
+      "Serious": 0.9,
+      "Interested": 0.921,
+      "Window-shop Risk": 0.983
     },
     "tier_recall": {
-      "Quality Lead": 0.549,
-      "Serious": 0.802,
-      "Interested": 0.889,
-      "Window-shop Risk": 0.709
+      "Quality Lead": 0.934,
+      "Serious": 0.766,
+      "Interested": 0.97,
+      "Window-shop Risk": 0.973
     },
     "confusion_matrix": {
       "labels": [
@@ -65,28 +65,28 @@
       ],
       "matrix": [
         [
-          56,
-          46,
-          0,
+          71,
+          4,
+          1,
           0
         ],
         [
-          10,
-          227,
-          46,
+          3,
+          72,
+          19,
           0
         ],
         [
-          0,
-          40,
-          320,
-          0
+          1,
+          4,
+          328,
+          5
         ],
         [
           0,
           0,
-          16,
-          39
+          8,
+          284
         ]
       ]
     }

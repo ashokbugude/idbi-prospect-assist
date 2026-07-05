@@ -144,10 +144,55 @@ def test_missing_fields_use_defaults():
     assert profile["lead_tier"] in LEAD_TIERS
 
 
+def test_features_vector_matches_names():
+    from app.features import FEATURE_NAMES, extract_features
+
+    row = generate_dataset(1)[0]
+    assert len(extract_features(row)) == len(FEATURE_NAMES)
+
+
+def test_rm_brief_generated(quality_customer):
+    from app.rm_brief import generate_rm_brief
+
+    brief = generate_rm_brief(score_customer(quality_customer))
+    assert brief["brief"]
+    assert "<strong>" in brief["brief_html"]
+    assert "source_label" in brief
+    assert brief["source"] in ("srishti_genai_template", "openai")
+
+
+def test_transaction_timeline(quality_customer):
+    from app.transaction_timeline import build_transaction_timeline
+
+    tl = build_transaction_timeline(quality_customer)
+    assert tl["transaction_count"] > 0
+    assert tl["entries"]
+
+
+def test_aa_flow(quality_customer):
+    from app.account_aggregator import fetch_aa_statements, initiate_aa_consent
+
+    quality_customer["has_other_bank_accounts"] = True
+    consent = initiate_aa_consent(quality_customer["customer_id"])
+    result = fetch_aa_statements(quality_customer, consent["consent_id"])
+    assert result["status"] == "success"
+    assert result["multibank_analysis"]["holistic_monthly_income"] > 0
+
+
+def test_underwriter_pdf(quality_customer):
+    from app.pdf_export import build_underwriter_pdf
+
+    profile = score_customer(quality_customer)
+    pdf = build_underwriter_pdf(profile, quality_customer)
+    assert pdf[:4] == b"%PDF"
+
+
 def test_impact_distribution_realistic():
     ranked = rank_customers(generate_dataset(200, seed=42))
     tiers = {t: sum(1 for c in ranked if c["lead_tier"] == t) for t in LEAD_TIERS}
+    n = len(ranked)
     assert tiers["Quality Lead"] >= 1
     assert tiers["Window-shop Risk"] >= 1
     rm_ready = tiers["Quality Lead"] + tiers["Serious"]
-    assert 0.2 <= rm_ready / len(ranked) <= 0.65
+    assert 0.20 <= rm_ready / n <= 0.35, f"RM queue {rm_ready/n:.0%} outside 20-35% target"
+    assert tiers["Window-shop Risk"] / n >= 0.20, f"Window-shop {tiers['Window-shop Risk']/n:.0%} below 20%"

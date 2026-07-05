@@ -1,108 +1,102 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ML Credibility — Prospect Assist AI</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <div class="container">
-    <a class="back-link" href="/">← Back to dashboard</a>
+{% extends "base.html" %}
+{% block title %}ML Credibility — IDBI Prospect Assist AI{% endblock %}
 
-    <header>
-      <span class="badge">AI/ML Transparency</span>
-      <h1>ML Credibility Report</h1>
-      <p class="subtitle">Validation metrics, confusion matrix, rules vs hybrid uplift, and safety guardrails.</p>
-    </header>
+{% block content %}
+<div class="page-hero">
+  <span class="badge">AI/ML Transparency</span>
+  <h1>ML Credibility Report</h1>
+  <p class="subtitle">Validation metrics, confusion matrix, rules vs hybrid uplift, and safety guardrails.</p>
+  <p class="section-note insight-banner">
+    <strong>Evaluation note:</strong> High R² / tier accuracy reflects XGBoost learning <em>rule-engine labels</em> on synthetic data.
+    Production retrains on IDBI sandbox outcomes post-shortlist. Rules remain the governance layer.
+  </p>
+</div>
 
-    {% if not report.model_ready %}
-    <p class="insight-banner">Model not trained — run <code>python scripts/train_model.py</code></p>
-    {% else %}
+{% if not report.model_ready %}
+<p class="insight-banner">Model not trained — run <code>python scripts/train_model.py</code></p>
+{% else %}
 
-    <section class="stats stats-4">
-      <div class="stat-card">
-        <div class="label">Tier Accuracy</div>
-        <div class="value">{{ (report.training.validation_tier_accuracy * 100)|round(1) }}%</div>
-      </div>
-      <div class="stat-card highlight-green">
-        <div class="label">Score MAE</div>
-        <div class="value">{{ report.training.validation_score_mae }}</div>
-      </div>
-      <div class="stat-card highlight-teal">
-        <div class="label">Score R²</div>
-        <div class="value">{{ report.training.validation_score_r2 }}</div>
-      </div>
-      <div class="stat-card highlight-blue">
-        <div class="label">Train / Val</div>
-        <div class="value">{{ report.training.train_rows }} / {{ report.training.validation_rows }}</div>
-      </div>
-    </section>
-
-    <section class="arch-section">
-      <h2>Credibility Checks</h2>
-      <div class="detail-kv wide">
-        {% for check, passed in report.credibility_checks.items() %}
-        <div><span>{{ check|replace('_', ' ')|title }}</span>
-          <strong class="{% if passed %}rag-green{% else %}rag-red{% endif %}">{{ "Pass" if passed else "Fail" }}</strong>
-        </div>
-        {% endfor %}
-      </div>
-    </section>
-
-    <section class="arch-section">
-      <h2>Rules vs Hybrid (n={{ report.rules_vs_hybrid.sample_size }})</h2>
-      <div class="detail-kv wide">
-        <div><span>Quality preservation</span><strong>{{ report.rules_vs_hybrid.quality_lead_preservation_pct }}%</strong></div>
-        <div><span>ML nudges applied</span><strong>{{ report.rules_vs_hybrid.ml_nudge_rate_pct }}%</strong></div>
-        <div><span>Avg nudge magnitude</span><strong>±{{ report.rules_vs_hybrid.avg_nudge_magnitude }}</strong></div>
-        <div><span>Tier upgrades</span><strong>{{ report.rules_vs_hybrid.tier_upgrades }}</strong></div>
-        <div><span>Tier downgrades</span><strong>{{ report.rules_vs_hybrid.tier_downgrades }}</strong></div>
-        <div><span>Window-shop detection lift</span><strong>{{ report.rules_vs_hybrid.window_shop_detection_lift_pct }}%</strong></div>
-      </div>
-    </section>
-
-    {% if report.training.tier_precision %}
-    <section class="arch-section">
-      <h2>Per-Tier Precision / Recall</h2>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Tier</th><th>Precision</th><th>Recall</th></tr></thead>
-          <tbody>
-            {% for tier in report.training.tier_precision %}
-            <tr>
-              <td>{{ tier }}</td>
-              <td>{{ (report.training.tier_precision[tier] * 100)|round(1) }}%</td>
-              <td>{{ (report.training.tier_recall[tier] * 100)|round(1) }}%</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
-    {% endif %}
-
-    {% if report.model_card.top_features %}
-    <section class="arch-section">
-      <h2>Top Feature Importance</h2>
-      <ul class="reasons">
-        {% for f in report.model_card.top_features %}
-        <li>{{ f.label }} — {{ f.importance }}</li>
-        {% endfor %}
-      </ul>
-    </section>
-    {% endif %}
-
-    <section class="arch-section">
-      <h2>Guardrails</h2>
-      <ul class="reasons methodology-list">
-        <li>Max ML nudge: ±{{ report.model_card.guardrails.max_nudge_points }} points</li>
-        <li>{{ report.model_card.guardrails.quality_lead_protection }}</li>
-        <li>{{ report.model_card.guardrails.rules_primary }}</li>
-        <li>Min confidence to apply: {{ report.model_card.guardrails.min_confidence }}</li>
-      </ul>
-    </section>
-    {% endif %}
+<section class="stats stats-4">
+  <div class="stat-card">
+    <div class="label">Tier Accuracy</div>
+    <div class="value">{{ (report.training.validation_tier_accuracy * 100)|round(1) }}%</div>
   </div>
-</body>
-</html>
+  <div class="stat-card highlight-green">
+    <div class="label">Score MAE</div>
+    <div class="value">{{ report.training.validation_score_mae }}</div>
+  </div>
+  <div class="stat-card highlight-orange">
+    <div class="label">Score R²</div>
+    <div class="value">{{ report.training.validation_score_r2 }}</div>
+  </div>
+  <div class="stat-card highlight-teal">
+    <div class="label">Train / Val</div>
+    <div class="value">{{ report.training.train_rows }} / {{ report.training.validation_rows }}</div>
+  </div>
+</section>
+
+<section class="arch-section">
+  <h2>Credibility Checks</h2>
+  <div class="detail-kv wide">
+    {% for check, passed in report.credibility_checks.items() %}
+    <div><span>{{ check|replace('_', ' ')|title }}</span>
+      <strong class="{% if passed %}rag-green{% else %}rag-red{% endif %}">{{ "Pass" if passed else "Fail" }}</strong>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="arch-section">
+  <h2>Rules vs Hybrid (n={{ report.rules_vs_hybrid.sample_size }})</h2>
+  <div class="detail-kv wide">
+    <div><span>Quality preservation</span><strong>{{ report.rules_vs_hybrid.quality_lead_preservation_pct }}%</strong></div>
+    <div><span>ML nudges applied</span><strong>{{ report.rules_vs_hybrid.ml_nudge_rate_pct }}%</strong></div>
+    <div><span>Avg nudge magnitude</span><strong>±{{ report.rules_vs_hybrid.avg_nudge_magnitude }}</strong></div>
+    <div><span>Tier upgrades</span><strong>{{ report.rules_vs_hybrid.tier_upgrades }}</strong></div>
+    <div><span>Tier downgrades</span><strong>{{ report.rules_vs_hybrid.tier_downgrades }}</strong></div>
+    <div><span>Window-shop detection lift</span><strong>{{ report.rules_vs_hybrid.window_shop_detection_lift_pct }}%</strong></div>
+  </div>
+</section>
+
+{% if report.training.tier_precision %}
+<section class="arch-section">
+  <h2>Per-Tier Precision / Recall</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tier</th><th>Precision</th><th>Recall</th></tr></thead>
+      <tbody>
+        {% for tier in report.training.tier_precision %}
+        <tr>
+          <td>{{ tier }}</td>
+          <td>{{ (report.training.tier_precision[tier] * 100)|round(1) }}%</td>
+          <td>{{ (report.training.tier_recall[tier] * 100)|round(1) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if report.model_card.top_features %}
+<section class="arch-section">
+  <h2>Top Feature Importance</h2>
+  <ul class="reasons">
+    {% for f in report.model_card.top_features %}
+    <li>{{ f.label }} — {{ f.importance }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="arch-section">
+  <h2>Guardrails</h2>
+  <ul class="reasons methodology-list">
+    <li>Max ML nudge: ±{{ report.model_card.guardrails.max_nudge_points }} points</li>
+    <li>{{ report.model_card.guardrails.quality_lead_protection }}</li>
+    <li>{{ report.model_card.guardrails.rules_primary }}</li>
+    <li>Min confidence to apply: {{ report.model_card.guardrails.min_confidence }}</li>
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

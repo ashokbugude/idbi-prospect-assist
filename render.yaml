@@ -7,5 +7,7 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: RM_DEMO_PIN
+        value: "idbi2026"
     buildCommand: ""
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT

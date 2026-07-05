@@ -15,7 +15,7 @@ Team: **Srishti GenAI** | Leader: Ashok Bugude
 ## Slide 2 — Problem
 
 - IDBI converts only **~1%** of liability-customer leads to loans
-- RMs waste time on **window shoppers** with no repayment capacity
+- RMs waste time on **window shoppers** (~30% of leads) with weak repayment capacity
 - Stated salary ≠ actual cashflow; single-bank view misses holistic income
 
 ---
@@ -24,9 +24,9 @@ Team: **Srishti GenAI** | Leader: Ashok Bugude
 
 **Behavioral lead intelligence** for existing CASA customers:
 
-1. **Repayment capacity** — disposable income, DTI, txn-inferred income
+1. **Repayment capacity** — disposable income, DTI, txn-inferred income, self-employed margins
 2. **Purchase intent** — digital journeys, session depth, calculator usage
-3. **Behavioral discipline** — spend patterns, bureau signals
+3. **Behavioral discipline** — need vs want vs luxury segregation
 4. **Lead tiers** — Quality → Serious → Interested → Window-shop Risk
 
 ---
@@ -34,73 +34,78 @@ Team: **Srishti GenAI** | Leader: Ashok Bugude
 ## Slide 4 — Architecture
 
 ```
-Customer data → Enrichment (income, delinquency, geo)
+Customer data → Enrichment (income, delinquency, geo, AA)
              → Rule engine (5 products, EMI gates)
              → XGBoost hybrid (safe ±8 pt nudge)
-             → RM dashboard + CSV export
+             → GenAI RM brief + dashboard + PDF export
 ```
 
-Post-shortlist: IDBI AWS sandbox APIs replace synthetic data.
+Post-shortlist: IDBI AWS sandbox APIs (API Gateway → ECS → RDS/S3).
 
 ---
 
-## Slide 5 — Key innovations
+## Slide 5 — Key innovations (differentiators)
 
-| Signal | How we use it |
-|--------|----------------|
-| Income inference | Credit inflow + savings vs stated salary |
-| Multi-bank view | Holistic income uplift for cross-bank customers |
-| Session depth | Distinguish deep intent from shallow browsing |
-| Delinquency risk | 12-month stress from day-1 spend + DTI |
-| Geo stability | UPI spend location vs declared city |
-| Mortgage product | Refinance/top-up for housing exposure |
+| Innovation | Demo |
+|------------|------|
+| **GenAI-ready RM brief** | Template + optional OpenAI (`OPENAI_API_KEY`); human-in-loop |
+| **30-day txn timeline** | Tagged salary, rent, luxury, savings |
+| **Account Aggregator flow** | Consent → fetch → auto-rescore |
+| **Before/After toggle** | 1% spray vs 25% RM queue conversion |
+| **Underwriter PDF** | Income, bureau, delinquency, product match |
 
 ---
 
 ## Slide 6 — ML approach
 
-- **28 → 32 features** including session minutes, geo, multi-bank share
+- **35 features** — feature vector order aligned with `FEATURE_NAMES`
 - XGBoost regressor + tier classifier trained on rule labels
 - **Safe hybrid:** ML nudges score ±8 pts; never demotes Quality Leads
 - Full explainability: rule reasons + ML contribution panel
 
 ---
 
-## Slide 7 — Business impact
+## Slide 7 — Business impact (simulation + pilot plan)
 
-| Metric | Before | After (POC) |
-|--------|--------|-------------|
+| Metric | Before | After (POC model) |
+|--------|--------|-------------------|
 | Baseline conversion | ~1% | — |
-| RM-prioritized queue | — | ~15–25% of leads |
-| Projected conversion | — | ~12–18% on queue |
-| **Quality lead conversion** | — | **≥32%** (Track 02 target) |
-| RM time saved | — | ~70% of window-shop filtered |
+| RM-prioritized queue | 100% contacted | **~23%** of leads |
+| RM queue conversion | — | **~25%** (tier-weighted sim) |
+| **Quality segment conversion** | — | **~41%** (simulation¹) |
+| Window-shop filtered | — | **~30%** deprioritized |
+
+¹ **Simulation, not observed IDBI pilot data.** Tier-weighted assumptions + Monte Carlo backtest; 4-week RM A/B pilot post-shortlist.
 
 ---
 
-## Slide 8 — Demo walkthrough
+## Slide 8 — Demo walkthrough (2 min)
 
-1. Dashboard — tier distribution + RM priority queue
-2. Customer detail — income inference, delinquency, geo, product match
-3. Multi-bank filter — holistic income view
-4. Export CSV — RM outreach list
-5. `/architecture` — system design for judges
+1. Login → Dashboard — tier distribution + **Before/After** toggle
+2. Quality Lead — **GenAI brief** → income inference → **txn timeline**
+3. Multi-bank — **AA consent** → holistic income uplift
+4. Impact page — pilot validation plan
+5. Export CSV + **Underwriter PDF**
+6. `/architecture` — AWS + compliance
 
-**Live URL:** _(paste Render deployment URL)_
+**Live URL:** _(paste Render deployment URL)_  
+**Login PIN:** `idbi2026` (RM demo gate)  
+**Public APIs (no login):** `/api/health`, `/api/impact`, `/api/sandbox/IDBI-L10010`  
+**GitHub:** `github.com/ashokbugude/idbi-prospect-assist`
 
 ---
 
-## Slide 9 — Roadmap (post-shortlist)
+## Slide 9 — Compliance & pilot roadmap
 
-- Integrate IDBI sandbox APIs (transactions, bureau, digital footprint)
-- A/B test RM callback SLA on Quality vs control
-- Fine-tune on real conversion outcomes
-- Embed in mobile RM app / CRM
+- **DPDP:** AA consent; data minimization
+- **No auto-credit-decision:** AI assists, underwriter decides
+- **Human-in-loop:** ML guardrails + RM workflow SLA
+- **Pilot KPIs:** Quality conversion ≥32%, RM hours −40%, 4-week A/B
 
 ---
 
 ## Slide 10 — Team & ask
 
 **Srishti GenAI** — GenAI + banking analytics  
-GitHub: `github.com/ashokbugude/idbi-prospect-assist`  
-Thank you — ready for sandbox access and pilot with IDBI RM teams.
+Ready for **IDBI AWS sandbox** access and RM team pilot.  
+Thank you.

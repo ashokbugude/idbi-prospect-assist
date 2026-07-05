@@ -1,27 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Architecture — Prospect Assist AI</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <div class="container">
-    <a class="back-link" href="/">← Back to dashboard</a>
+{% extends "base.html" %}
+{% block title %}Architecture — IDBI Prospect Assist AI{% endblock %}
 
-    <header>
-      <span class="badge">System Design</span>
-      <h1>Prospect Assist AI — Architecture</h1>
-      <p class="subtitle">
-        Hybrid rules + XGBoost pipeline for Track 02: behavioral repayment capacity,
-        purchase intent, and lead tiering for IDBI liability customers.
-      </p>
-    </header>
+{% block content %}
+<div class="page-hero">
+  <span class="badge">System Design</span>
+  <h1>Prospect Assist AI — Architecture</h1>
+  <p class="subtitle">
+    Hybrid rules + XGBoost pipeline for Track 02: behavioral repayment capacity,
+    purchase intent, and lead tiering for IDBI liability customers.
+  </p>
+</div>
 
-    <section class="arch-section">
-      <h2>Data Flow</h2>
-      <pre class="arch-diagram">Liability Customer (CASA / salary / UPI)
+<section class="arch-section">
+  <h2>Data Flow</h2>
+  <pre class="arch-diagram">Liability Customer (CASA / salary / UPI)
         │
         ▼
 ┌───────────────────┐     ┌────────────────────┐
@@ -46,81 +38,129 @@
 │  RM Dashboard     │  Priority queue · CSV export · Explainability
 │  FastAPI + Jinja  │  /api/sandbox stub for post-shortlist IDBI APIs
 └───────────────────┘</pre>
-    </section>
+</section>
 
-    <section class="arch-section">
-      <h2>Scoring Dimensions (Track 02 AMA)</h2>
-      <div class="arch-grid">
-        <article class="arch-card">
-          <h3>Repayment Capacity</h3>
-          <p>Disposable income, DTI, salary stability, txn-inferred income, multi-bank holistic view.</p>
-        </article>
-        <article class="arch-card">
-          <h3>Purchase Intent</h3>
-          <p>Loan page visits, EMI calculator usage, session depth, application started, window-shopping flags.</p>
-        </article>
-        <article class="arch-card">
-          <h3>Behavioral Discipline</h3>
-          <p>Day-1 salary spend, need vs luxury mix, savings transfers, bureau enquiries.</p>
-        </article>
-        <article class="arch-card">
-          <h3>Product Match</h3>
-          <p>Home, Mortgage, Auto, Personal, Consumer Durable — gated by affordable EMI estimate.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="arch-section">
-      <h2>API Surface</h2>
-      <div class="detail-kv wide">
-        <div><span>GET /api/health</span><strong>Service + ML status</strong></div>
-        <div><span>GET /api/customers</span><strong>Ranked lead list</strong></div>
-        <div><span>GET /api/rm-queue</span><strong>RM-priority subset</strong></div>
-        <div><span>GET /api/rm-queue/export</span><strong>CSV download</strong></div>
-        <div><span>GET /api/multi-bank</span><strong>Holistic income view</strong></div>
-        <div><span>GET /api/impact</span><strong>Conversion lift metrics</strong></div>
-        <div><span>GET /api/impact/methodology</span><strong>Documented proof model</strong></div>
-        <div><span>GET /api/ml/model-card</span><strong>ML transparency artifact</strong></div>
-        <div><span>POST /api/multi-bank/analyze</span><strong>Statement upload simulation</strong></div>
-        <div><span>GET /api/sandbox/{id}</span><strong>Post-shortlist stub</strong></div>
-      </div>
-    </section>
-
-    {% if model_card %}
-    <section class="arch-section">
-      <h2>ML Model Card</h2>
-      <div class="detail-kv wide">
-        <div><span>Model</span><strong>{{ model_card.model_type }}</strong></div>
-        <div><span>Features</span><strong>{{ model_card.feature_count }}</strong></div>
-        <div><span>Validation MAE</span><strong>{{ model_card.validation_mae }}</strong></div>
-        <div><span>Tier accuracy</span><strong>{{ (model_card.validation_tier_accuracy * 100)|round(1) if model_card.validation_tier_accuracy else "—" }}%</strong></div>
-        <div><span>Train rows</span><strong>{{ model_card.train_rows }}</strong></div>
-      </div>
-      {% if model_card.top_features %}
-      <h3>Top Feature Importance</h3>
-      <ul class="reasons">
-        {% for f in model_card.top_features[:5] %}
-        <li>{{ f.label }} — {{ f.importance }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-      <p class="section-note">
-        Guardrails: max ±{{ model_card.guardrails.max_nudge_points }} pt nudge ·
-        {{ model_card.guardrails.quality_lead_protection }}
-      </p>
-    </section>
-    {% endif %}
-
-    <section class="arch-section">
-      <h2>Deployment</h2>
-      <p class="section-note">
-        ML model: {% if ml_ready %}trained and loaded{% else %}not trained — run scripts/train_model.py{% endif %}.
-        Docker image trains on build. Render blueprint in <code>render.yaml</code>.
-      </p>
-      <p class="section-note">
-        Post-shortlist: swap synthetic data with IDBI AWS sandbox APIs (transactions, bureau, digital footprint).
-      </p>
-    </section>
+<section class="arch-section">
+  <h2>Scoring Dimensions (Track 02 AMA)</h2>
+  <div class="arch-grid">
+    <article class="arch-card">
+      <h3>Repayment Capacity</h3>
+      <p>Disposable income, DTI, salary stability, txn-inferred income, multi-bank holistic view.</p>
+    </article>
+    <article class="arch-card">
+      <h3>Purchase Intent</h3>
+      <p>Loan page visits, EMI calculator usage, session depth, application started, window-shopping flags.</p>
+    </article>
+    <article class="arch-card">
+      <h3>Behavioral Discipline</h3>
+      <p>Day-1 salary spend, need vs luxury mix, savings transfers, bureau enquiries.</p>
+    </article>
+    <article class="arch-card">
+      <h3>Product Match</h3>
+      <p>Home, Mortgage, Auto, Personal, Consumer Durable — gated by affordable EMI estimate.</p>
+    </article>
   </div>
-</body>
-</html>
+</section>
+
+<section class="arch-section">
+  <h2>API Surface</h2>
+  <div class="detail-kv wide">
+    <div><span>GET /api/health</span><strong>Service + ML status</strong></div>
+    <div><span>GET /api/customers</span><strong>Ranked lead list</strong></div>
+    <div><span>GET /api/rm-queue</span><strong>RM-priority subset</strong></div>
+    <div><span>GET /api/rm-queue/export</span><strong>CSV download</strong></div>
+    <div><span>GET /api/multi-bank</span><strong>Holistic income view</strong></div>
+    <div><span>GET /api/impact</span><strong>Conversion lift metrics</strong></div>
+    <div><span>GET /api/impact/methodology</span><strong>Documented proof model</strong></div>
+    <div><span>GET /api/ml/model-card</span><strong>ML transparency artifact</strong></div>
+    <div><span>POST /api/multi-bank/analyze</span><strong>Statement upload simulation</strong></div>
+    <div><span>GET /api/sandbox/{id}</span><strong>Post-shortlist stub</strong></div>
+  </div>
+</section>
+
+{% if model_card %}
+<section class="arch-section">
+  <h2>ML Model Card</h2>
+  <div class="detail-kv wide">
+    <div><span>Model</span><strong>{{ model_card.model_type }}</strong></div>
+    <div><span>Features</span><strong>{{ model_card.feature_count }}</strong></div>
+    <div><span>Validation MAE</span><strong>{{ model_card.validation_mae }}</strong></div>
+    <div><span>Tier accuracy</span><strong>{{ (model_card.validation_tier_accuracy * 100)|round(1) if model_card.validation_tier_accuracy else "—" }}%</strong></div>
+    <div><span>Train rows</span><strong>{{ model_card.train_rows }}</strong></div>
+  </div>
+  {% if model_card.top_features %}
+  <h3>Top Feature Importance</h3>
+  <ul class="reasons">
+    {% for f in model_card.top_features[:5] %}
+    <li>{{ f.label }} — {{ f.importance }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p class="section-note">
+    Guardrails: max ±{{ model_card.guardrails.max_nudge_points }} pt nudge ·
+    {{ model_card.guardrails.quality_lead_protection }}
+  </p>
+</section>
+{% endif %}
+
+<section class="arch-section">
+  <h2>AWS Production Architecture (Post-Shortlist)</h2>
+  <pre class="arch-diagram">Internet / IDBI RM Portal
+        │
+        ▼
+┌───────────────────┐
+│  API Gateway      │  TLS · WAF · rate limits
+└─────────┬─────────┘
+          │
+    ┌─────┴─────┬─────────────┬──────────────┐
+    ▼           ▼             ▼              ▼
+┌────────┐ ┌─────────┐ ┌───────────┐ ┌─────────────┐
+│ ECS /  │ │ Lambda  │ │ RDS       │ │ S3          │
+│ Fargate│ │ (batch  │ │ (scores,  │ │ (txn blobs, │
+│ FastAPI│ │  score) │ │  audit)   │ │  PDF packs) │
+└───┬────┘ └────┬────┘ └───────────┘ └─────────────┘
+    │           │
+    └─────┬─────┘
+          ▼
+┌───────────────────────────────────────────────┐
+│ IDBI AWS Sandbox APIs (Round 2)               │
+│ /sandbox/v1/customers/{id}/transactions       │
+│ /sandbox/v1/customers/{id}/bureau             │
+│ /sandbox/v1/customers/{id}/digital            │
+└───────────────────────────────────────────────┘</pre>
+</section>
+
+<section class="arch-section">
+  <h2>Compliance &amp; Governance</h2>
+  <ul class="reasons methodology-list">
+    <li><strong>DPDP:</strong> Customer consent via AA framework; data minimization for scoring only.</li>
+    <li><strong>No auto-credit-decision:</strong> AI tiers and briefs assist RMs; underwriter retains final authority.</li>
+    <li><strong>Human-in-loop:</strong> ML nudge capped at ±8 pts; Quality Leads never demoted by model.</li>
+    <li><strong>RBI AI norms:</strong> Explainability on every lead — rule reasons + ML contributions + audit trail.</li>
+    <li><strong>RM access control:</strong> PIN/session gate on demo; production maps to IDBI SSO/LDAP.</li>
+  </ul>
+</section>
+
+<section class="arch-section">
+  <h2>Pilot Roadmap KPIs</h2>
+  <div class="detail-kv wide">
+    <div><span>Week 1–2</span><strong>Sandbox API integration + RM training</strong></div>
+    <div><span>Week 3–4</span><strong>A/B callback pilot (Quality vs control)</strong></div>
+    <div><span>Primary KPI</span><strong>Quality segment conversion ≥ 32%</strong></div>
+    <div><span>Ops KPI</span><strong>RM hours per booked loan −40%</strong></div>
+    <div><span>Risk KPI</span><strong>Window-shop false-positive &lt; 15%</strong></div>
+    <div><span>Scale KPI</span><strong>10K leads/month scored in &lt; 2s p95</strong></div>
+  </div>
+</section>
+
+<section class="arch-section">
+  <h2>Deployment</h2>
+  <p class="section-note">
+    ML model: {% if ml_ready %}trained and loaded{% else %}not trained — run scripts/train_model.py{% endif %}.
+    Docker image trains on build. Render blueprint in <code>render.yaml</code>.
+  </p>
+  <p class="section-note">
+    Post-shortlist: swap synthetic data with IDBI AWS sandbox APIs (transactions, bureau, digital footprint).
+  </p>
+</section>
+{% endblock %}

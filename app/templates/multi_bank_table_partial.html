@@ -1,0 +1,45 @@
+{% with toolbar_label='Multi-bank table pagination', bottom=false %}
+{% include "_pagination_toolbar.html" %}
+{% endwith %}
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Customer</th>
+        <th>Tier</th>
+        <th>Stated</th>
+        <th>IDBI Inferred</th>
+        <th>Holistic</th>
+        <th>EMI Uplift</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in customers %}
+      <tr>
+        <td>
+          <strong>{{ c.name }}</strong><br />
+          <small>{{ c.customer_id }}</small>
+        </td>
+        <td><span class="tier {{ c.lead_tier_css }}">{{ c.lead_tier }}</span></td>
+        <td>₹{{ "{:,}".format(c.monthly_income) }}</td>
+        <td>₹{{ "{:,}".format(c.inferred_monthly_income or c.monthly_income) }}</td>
+        <td>₹{{ "{:,}".format(c.holistic_monthly_income or c.inferred_monthly_income or c.monthly_income) }}</td>
+        <td>
+          {% if c.multibank_analysis %}
+          +{{ c.multibank_analysis.emi_uplift_pct }}%
+          {% else %}—{% endif %}
+        </td>
+        <td><a href="/customer/{{ c.customer_id }}">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if pagination.total > pagination.per_page %}
+{% with toolbar_label='Multi-bank table pagination', bottom=true %}
+{% include "_pagination_toolbar.html" %}
+{% endwith %}
+{% endif %}

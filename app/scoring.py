@@ -305,25 +305,31 @@ def assign_lead_tier(
     delinq_band = delinq.get("risk_band", "Low")
     composite = _composite_score(repayment, behavior, intent, customer)
 
-    if customer.get("window_shopping_flag") and intent.score < 55:
+    if customer.get("window_shopping_flag") and intent.score < 60:
         return "Window-shop Risk"
 
     if delinq_band == "High" and behavior.score < 48:
-        if intent.score < 40 or customer.get("window_shopping_flag"):
+        if intent.score < 42 or customer.get("window_shopping_flag"):
             return "Window-shop Risk"
         return "Interested"
 
     if (
-        composite >= 72
-        and repayment.score >= 58
-        and intent.score >= 50
-        and behavior.score >= 48
+        composite >= 78
+        and repayment.score >= 62
+        and intent.score >= 55
+        and behavior.score >= 52
         and delinq_band != "High"
     ):
         return "Quality Lead"
-    if composite >= 55 and repayment.score >= 42 and intent.score >= 35 and delinq_band != "High":
+    if (
+        composite >= 62
+        and repayment.score >= 48
+        and intent.score >= 42
+        and behavior.score >= 40
+        and delinq_band != "High"
+    ):
         return "Serious"
-    if composite >= 32:
+    if composite >= 38:
         return "Interested"
     return "Window-shop Risk"
 

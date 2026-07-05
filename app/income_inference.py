@@ -30,9 +30,14 @@ def infer_monthly_income(customer: dict) -> dict:
         confidence = 0.82 if customer.get("salary_stability_months", 0) >= 6 else 0.68
         method = "Salaried credit-inflow + stated salary reconciliation"
     elif employment == "self_employed":
-        inferred = int(credit_inflow * 0.95 + investment_transfers * 0.4)
-        confidence = 0.62
-        method = "Business inflows minus operating spend + retained transfers"
+        from app.config import SELF_EMPLOYED_MARGINS
+
+        biz = customer.get("business_type", "services")
+        margin = SELF_EMPLOYED_MARGINS.get(biz, 0.45)
+        gross_inflow = credit_inflow
+        inferred = int(gross_inflow * margin + investment_transfers * 0.35)
+        confidence = 0.58 + margin * 0.15
+        method = f"Self-employed net margin ({biz.replace('_', ' ')}, {margin:.0%}) on business inflows"
     else:
         inferred = int(credit_inflow * 0.88 + retained * 0.25)
         confidence = 0.55

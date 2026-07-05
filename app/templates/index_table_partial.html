@@ -1,0 +1,56 @@
+{% with toolbar_label='Lead table pagination', bottom=false %}
+{% include "_pagination_toolbar.html" %}
+{% endwith %}
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Customer</th>
+        <th>Lead Tier</th>
+        <th>Composite</th>
+        <th>Repay / Intent / Discipline</th>
+        <th>Top Offer</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for customer in customers %}
+      <tr>
+        <td>
+          <a class="customer-link" href="/customer/{{ customer.customer_id }}">
+            <strong>{{ customer.name }}</strong>
+          </a><br />
+          <small>{{ customer.customer_id }} · {{ customer.city }}</small><br />
+          <small>{{ customer.employment_type|replace('_', ' ')|title }} · ₹{{ "{:,}".format(customer.monthly_income) }}/mo</small>
+          {% if customer.inferred_monthly_income and customer.inferred_monthly_income != customer.monthly_income %}
+          <br /><small class="inferred-tag">Inferred ₹{{ "{:,}".format(customer.inferred_monthly_income) }}/mo</small>
+          {% endif %}
+          {% if customer.has_other_bank_accounts %}
+          <br /><small class="multi-bank-tag">Multi-bank holistic view</small>
+          {% endif %}
+        </td>
+        <td>
+          <span class="tier {{ customer.lead_tier_css }}">{{ customer.lead_tier }}</span>
+        </td>
+        <td><span class="score">{{ customer.composite_lead_score }}</span></td>
+        <td>
+          <div class="mini-scores">
+            <span title="Repayment">R {{ customer.repayment_capacity.score }}</span>
+            <span title="Intent">I {{ customer.purchase_intent.score }}</span>
+            <span title="Discipline">D {{ customer.behavioral_discipline.score }}</span>
+          </div>
+        </td>
+        <td>{{ customer.display_product_label or customer.top_product_label }}</td>
+        <td class="action-cell">{{ customer.recommended_action }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if pagination.total > pagination.per_page %}
+{% with toolbar_label='Lead table pagination', bottom=true %}
+{% include "_pagination_toolbar.html" %}
+{% endwith %}
+{% endif %}

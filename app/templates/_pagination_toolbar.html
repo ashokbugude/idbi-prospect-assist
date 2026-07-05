@@ -1,0 +1,34 @@
+{% if pagination.total > 0 %}
+<nav class="table-toolbar{% if bottom %} table-toolbar-bottom{% else %} table-toolbar-sticky{% endif %}" aria-label="{{ toolbar_label|default('Table pagination') }}">
+  <p class="pagination-summary">
+    {% if bottom and pagination.total > pagination.per_page %}
+    Page {{ pagination.page }} of {{ pagination.total_pages }}
+    {% else %}
+    Showing {{ pagination.range_start }}–{{ pagination.range_end }} of {{ pagination.total }} customers
+    {% endif %}
+  </p>
+  <div class="pagination">
+    {% if pagination.has_prev %}
+    <a class="page-btn page-link-ajax" href="{{ page_query(pagination.page - 1) }}">← Prev</a>
+    {% else %}
+    <span class="page-btn disabled">← Prev</span>
+    {% endif %}
+
+    {% for p in range(1, pagination.total_pages + 1) %}
+      {% if p == pagination.page %}
+      <span class="page-num current" aria-current="page">{{ p }}</span>
+      {% elif p == 1 or p == pagination.total_pages or (p >= pagination.page - 2 and p <= pagination.page + 2) %}
+      <a class="page-num page-link-ajax" href="{{ page_query(p) }}">{{ p }}</a>
+      {% elif p == pagination.page - 3 or p == pagination.page + 3 %}
+      <span class="page-ellipsis">…</span>
+      {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+    <a class="page-btn page-link-ajax" href="{{ page_query(pagination.page + 1) }}">Next →</a>
+    {% else %}
+    <span class="page-btn disabled">Next →</span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}

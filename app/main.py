@@ -5,14 +5,19 @@ import io
 import json
 from pathlib import Path
 
-from fastapi import FastAPI, Request, Form
+from urllib.parse import urlencode
+
+from fastapi import FastAPI, Request, Form, Response
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app.auth import auth_token, is_authenticated, require_auth, verify_pin
+from app.config import APP_TITLE, APP_VERSION, AUTH_COOKIE, HERO_CUSTOMERS
 from app.scoring import (
     LEAD_TIERS,
     PRODUCT_LABELS,
+    TIER_CSS,
     compute_impact_metrics,
     rank_customers,
     score_customer,
@@ -20,15 +25,24 @@ from app.scoring import (
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_PATH = BASE_DIR / "data" / "customers.json"
+DASHBOARD_PAGE_SIZE = 20
 
 app = FastAPI(
-    title="IDBI Prospect Assist AI",
+    title=APP_TITLE,
     description="Track 02 — behavioral repayment capacity + intent scoring for liability customers",
-    version="0.6.1",
+    version=APP_VERSION,
 )
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+
+@app.middleware("http")
+async def rm_auth_middleware(request: Request, call_next):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    return await call_next(request)
 
 
 def load_customers() -> list[dict]:
@@ -82,6 +96,109 @@ def _apply_filters(
     return ranked
 
 
+def _paginate(items: list[dict], page: int, per_page: int = DASHBOARD_PAGE_SIZE) -> tuple[list[dict], dict]:
+    total = len(items)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * per_page
+    page_items = items[start : start + per_page]
+    return page_items, {
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": total_pages,
+        "has_prev": page > 1,
+        "has_next": page < total_pages,
+        "range_start": start + 1 if total else 0,
+        "range_end": start + len(page_items),
+    }
+
+
+def _dashboard_query(
+    page: int,
+    product: str | None = None,
+    tier: str | None = None,
+    min_score: float = 0,
+    multi_bank: bool = False,
+) -> str:
+    params: dict[str, str | int | float] = {"page": page}
+    if product:
+        params["product"] = product
+    if tier:
+        params["tier"] = tier
+    if min_score > 0:
+        params["min_score"] = min_score
+    if multi_bank:
+        params["multi_bank"] = "true"
+    return "?" + urlencode(params)
+
+
+def _dashboard_table_context(
+    product: str | None,
+    tier: str | None,
+    min_score: float,
+    multi_bank: bool,
+    page: int,
+) -> dict:
+    all_ranked = rank_customers(load_customers())
+    ranked = _apply_filters(all_ranked, product, tier, min_score, multi_bank_only=multi_bank)
+    customers, pagination = _paginate(ranked, page)
+    return {
+        "customers": customers,
+        "pagination": pagination,
+        "page_query": lambda p: _dashboard_query(
+            p, product=product, tier=tier, min_score=min_score, multi_bank=multi_bank
+        ),
+    }
+
+
+def _multibank_customers() -> list[dict]:
+    ranked = rank_customers(load_customers())
+    return [c for c in ranked if c.get("has_other_bank_accounts")]
+
+
+def _multibank_query(page: int) -> str:
+    return "?" + urlencode({"page": page})
+
+
+def _multibank_table_context(page: int) -> dict:
+    customers, pagination = _paginate(_multibank_customers(), page)
+    return {
+        "customers": customers,
+        "pagination": pagination,
+        "page_query": lambda p: _multibank_query(p),
+    }
+
+
+def _rescored_profile(raw: dict, enriched: dict) -> dict:
+    before = score_customer(raw)
+    after = score_customer(enriched)
+    return {
+        "lead_tier": after["lead_tier"],
+        "lead_tier_css": TIER_CSS.get(after["lead_tier"], ""),
+        "composite_lead_score": after["composite_lead_score"],
+        "affordable_emi_estimate": after.get("affordable_emi_estimate"),
+        "holistic_monthly_income": after.get("holistic_monthly_income"),
+        "previous_tier": before["lead_tier"],
+        "previous_tier_css": TIER_CSS.get(before["lead_tier"], ""),
+        "previous_composite_lead_score": before["composite_lead_score"],
+        "tier_changed": before["lead_tier"] != after["lead_tier"],
+    }
+
+
+def _tier_explanation(profile: dict) -> list[str]:
+    items: list[str] = []
+    for key in ("repayment_capacity", "purchase_intent", "behavioral_discipline"):
+        dim = profile.get(key) or {}
+        reasons = dim.get("reasons") or []
+        if reasons:
+            items.append(f"{dim.get('name', key)}: {reasons[0]}")
+    ml = profile.get("ml_enhancement") or {}
+    if ml.get("applied") and ml.get("nudge_applied"):
+        items.append(f"ML nudge: {ml['nudge_applied']} (confidence {ml.get('ml_confidence', '—')})")
+    return items[:4]
+
+
 def _dashboard_stats(ranked: list[dict], all_ranked: list[dict]) -> dict:
     total = len(ranked)
     impact = compute_impact_metrics(load_customers())
@@ -110,7 +227,58 @@ def _dashboard_stats(ranked: list[dict], all_ranked: list[dict]) -> dict:
             f"Quality segment ~{impact.get('quality_lead_conversion_pct', 0)}% "
             f"(target {impact.get('quality_conversion_target_pct', 32)}%)"
         ),
+        "digital_avg_session": round(
+            sum(
+                c.get("purchase_intent", {}).get("details", {}).get("avg_session_minutes", 0)
+                for c in all_ranked
+            ) / len(all_ranked),
+            1,
+        ) if all_ranked else 0,
+        "digital_calc_pct": round(
+            sum(
+                1
+                for c in all_ranked
+                if c.get("purchase_intent", {}).get("details", {}).get("loan_calculator_uses", 0) > 0
+            )
+            / len(all_ranked) * 100,
+            1,
+        ) if all_ranked else 0,
+        "digital_app_started_pct": round(
+            sum(
+                1
+                for c in all_ranked
+                if c.get("purchase_intent", {}).get("details", {}).get("application_started")
+            )
+            / len(all_ranked) * 100,
+            1,
+        ) if all_ranked else 0,
     }
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, error: str | None = None):
+    if is_authenticated(request):
+        return RedirectResponse(url="/", status_code=302)
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "error": error, "active": ""},
+    )
+
+
+@app.post("/login")
+async def login_submit(pin: str = Form(...)):
+    if not verify_pin(pin):
+        return RedirectResponse(url="/login?error=1", status_code=302)
+    response = RedirectResponse(url="/", status_code=302)
+    response.set_cookie(AUTH_COOKIE, auth_token(), httponly=True, samesite="lax", max_age=86400 * 7)
+    return response
+
+
+@app.get("/logout")
+async def logout():
+    response = RedirectResponse(url="/login", status_code=302)
+    response.delete_cookie(AUTH_COOKIE)
+    return response
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -120,15 +288,17 @@ async def dashboard(
     tier: str | None = None,
     min_score: float = 0,
     multi_bank: bool = False,
+    page: int = 1,
 ):
     all_ranked = rank_customers(load_customers())
     ranked = _apply_filters(all_ranked, product, tier, min_score, multi_bank_only=multi_bank)
+    table_ctx = _dashboard_table_context(product, tier, min_score, multi_bank, page)
 
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "customers": ranked[:50],
+            **table_ctx,
             "rm_queue": [c for c in all_ranked if c.get("rm_call_eligible")][:10],
             "stats": _dashboard_stats(ranked, all_ranked),
             "products": PRODUCT_LABELS,
@@ -137,7 +307,24 @@ async def dashboard(
             "selected_tier": tier,
             "min_score": min_score,
             "multi_bank": multi_bank,
+            "active": "dashboard",
+            "hero_customers": HERO_CUSTOMERS,
         },
+    )
+
+
+@app.get("/partials/dashboard-table", response_class=HTMLResponse)
+async def dashboard_table_partial(
+    request: Request,
+    product: str | None = None,
+    tier: str | None = None,
+    min_score: float = 0,
+    multi_bank: bool = False,
+    page: int = 1,
+):
+    return templates.TemplateResponse(
+        "index_table_partial.html",
+        {"request": request, **_dashboard_table_context(product, tier, min_score, multi_bank, page)},
     )
 
 
@@ -147,7 +334,7 @@ async def ml_credibility_page(request: Request):
 
     return templates.TemplateResponse(
         "ml.html",
-        {"request": request, "report": get_ml_credibility_report(load_customers())},
+        {"request": request, "report": get_ml_credibility_report(load_customers()), "active": "ml"},
     )
 
 
@@ -170,17 +357,28 @@ async def impact_page(request: Request):
     impact = compute_impact_metrics(load_customers())
     return templates.TemplateResponse(
         "impact.html",
-        {"request": request, "impact": impact},
+        {"request": request, "impact": impact, "active": "impact"},
     )
 
 
 @app.get("/multi-bank", response_class=HTMLResponse)
-async def multi_bank_page(request: Request):
-    ranked = rank_customers(load_customers())
-    multi = [c for c in ranked if c.get("has_other_bank_accounts")][:40]
+async def multi_bank_page(request: Request, page: int = 1):
     return templates.TemplateResponse(
         "multi_bank.html",
-        {"request": request, "customers": multi, "all_customers": load_customers()},
+        {
+            "request": request,
+            "all_customers": load_customers(),
+            "active": "multi-bank",
+            **_multibank_table_context(page),
+        },
+    )
+
+
+@app.get("/partials/multi-bank-table", response_class=HTMLResponse)
+async def multi_bank_table_partial(request: Request, page: int = 1):
+    return templates.TemplateResponse(
+        "multi_bank_table_partial.html",
+        {"request": request, **_multibank_table_context(page)},
     )
 
 
@@ -203,16 +401,10 @@ async def analyze_multibank_upload(
         enriched["multi_bank_income_share"] = round(
             other_bank_monthly_inflow / max(analysis["holistic_monthly_income"], 1), 2
         )
-    profile = score_customer(enriched)
     return {
         "customer_id": customer_id,
         "multibank_analysis": analysis,
-        "rescored_profile": {
-            "lead_tier": profile["lead_tier"],
-            "composite_lead_score": profile["composite_lead_score"],
-            "affordable_emi_estimate": profile.get("affordable_emi_estimate"),
-            "holistic_monthly_income": profile.get("holistic_monthly_income"),
-        },
+        "rescored_profile": _rescored_profile(raw, enriched),
     }
 
 
@@ -249,20 +441,40 @@ async def architecture(request: Request):
             "ml_ready": model.is_ready,
             "feature_count": len(FEATURE_NAMES),
             "model_card": model_card,
+            "active": "architecture",
         },
     )
 
 
 @app.get("/customer/{customer_id}", response_class=HTMLResponse)
 async def customer_detail(request: Request, customer_id: str):
+    from app.rm_brief import generate_rm_brief
+    from app.transaction_timeline import build_transaction_timeline
+
     raw = _find_customer(customer_id)
     if not raw:
         return RedirectResponse(url="/", status_code=302)
 
     profile = score_customer(raw)
+    timeline = build_transaction_timeline(raw)
+    rm_brief = generate_rm_brief(profile)
+    need = float(raw.get("need_spend_ratio", 0.5))
+    want = float(raw.get("want_spend_ratio", max(0, 1 - need - float(raw.get("luxury_spend_ratio", 0.15)))))
+    luxury = float(raw.get("luxury_spend_ratio", 0.15))
+    spend_breakdown = {"need": need, "want": want, "luxury": luxury}
+
     return templates.TemplateResponse(
         "detail.html",
-        {"request": request, "customer": profile, "raw": raw},
+        {
+            "request": request,
+            "customer": profile,
+            "raw": raw,
+            "timeline": timeline,
+            "rm_brief": rm_brief,
+            "spend_breakdown": spend_breakdown,
+            "tier_explanation": _tier_explanation(profile),
+            "active": "",
+        },
     )
 
 
@@ -354,17 +566,90 @@ async def api_multi_bank(limit: int = 50):
     }
 
 
+@app.get("/api/demo-comparison")
+async def api_demo_comparison():
+    impact = compute_impact_metrics(load_customers())
+    return {
+        "before": {
+            "label": "Spray & pray (all leads)",
+            "conversion_pct": impact.get("baseline_conversion_pct", 1.0),
+            "rm_calls_pct": 100,
+            "leads_contacted": impact.get("total_leads", 0),
+        },
+        "after": {
+            "label": "RM-prioritized queue",
+            "conversion_pct": impact.get("rm_queue_conversion_pct", 0),
+            "quality_segment_pct": impact.get("quality_lead_conversion_pct", 0),
+            "rm_calls_pct": impact.get("rm_queue_pct", 0),
+            "rm_time_saved_pct": impact.get("estimated_rm_time_saved_pct", 0),
+            "leads_contacted": impact.get("rm_actionable_leads", 0),
+        },
+        "lift_multiplier": impact.get("proof_summary", {}).get("rm_lift_multiplier", 0),
+        "track02_target_met": impact.get("meets_track02_conversion_target", False),
+    }
+
+
+@app.post("/api/aa/consent")
+async def api_aa_consent(customer_id: str = Form(...)):
+    from app.account_aggregator import initiate_aa_consent
+
+    if not _find_customer(customer_id):
+        return JSONResponse({"error": "Customer not found"}, status_code=404)
+    return initiate_aa_consent(customer_id)
+
+
+@app.post("/api/aa/fetch")
+async def api_aa_fetch(customer_id: str = Form(...), consent_id: str = Form(...)):
+    from app.account_aggregator import fetch_aa_statements
+
+    raw = _find_customer(customer_id)
+    if not raw:
+        return JSONResponse({"error": "Customer not found"}, status_code=404)
+    return fetch_aa_statements(raw, consent_id)
+
+
+@app.get("/api/customer/{customer_id}/rm-brief")
+async def api_rm_brief(customer_id: str):
+    from app.rm_brief import generate_rm_brief
+
+    raw = _find_customer(customer_id)
+    if not raw:
+        return JSONResponse({"error": "Customer not found"}, status_code=404)
+    return generate_rm_brief(score_customer(raw))
+
+
+@app.get("/api/customer/{customer_id}/underwriter-pdf")
+async def api_underwriter_pdf(customer_id: str):
+    from app.pdf_export import build_underwriter_pdf
+
+    raw = _find_customer(customer_id)
+    if not raw:
+        return JSONResponse({"error": "Customer not found"}, status_code=404)
+    profile = score_customer(raw)
+    pdf_bytes = build_underwriter_pdf(profile, raw)
+    return StreamingResponse(
+        iter([pdf_bytes]),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="underwriter_{customer_id}.pdf"',
+        },
+    )
+
+
 @app.get("/api/sandbox/{customer_id}")
 async def sandbox_stub(customer_id: str):
     """
     Post-shortlist IDBI sandbox API stub.
     Returns synthetic transaction + bureau payload shape for integration testing.
     """
+    from app.transaction_timeline import build_transaction_timeline
+
     raw = _find_customer(customer_id)
     if not raw:
         return {"error": "Customer not found", "sandbox": True}
 
     profile = score_customer(raw)
+    timeline = build_transaction_timeline(raw)
     return {
         "sandbox": True,
         "status": "stub",
@@ -380,6 +665,14 @@ async def sandbox_stub(customer_id: str):
             "geo_transaction_consistency": raw.get("geo_transaction_consistency"),
             "bureau_enquiries_90d": raw.get("bureau_enquiries_90d"),
             "credit_score_band": raw.get("credit_score_band"),
+        },
+        "sample_transactions": timeline["entries"][:10],
+        "digital_footprint": {
+            "loan_page_visits_30d": raw.get("loan_page_visits_30d"),
+            "loan_calculator_uses": raw.get("loan_calculator_uses"),
+            "avg_session_minutes": raw.get("avg_session_minutes"),
+            "application_started": raw.get("application_started"),
+            "window_shopping_flag": raw.get("window_shopping_flag"),
         },
         "scoring_preview": {
             "lead_tier": profile["lead_tier"],
@@ -402,6 +695,6 @@ async def health():
     return {
         "status": "ok",
         "track": "02-prospect-assist-ai",
-        "version": "0.6.0",
+        "version": APP_VERSION,
         "ml_ready": get_model().is_ready,
     }

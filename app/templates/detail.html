@@ -1,14 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ customer.name }} — Prospect Assist AI</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <div class="container">
-    <a class="back-link" href="/">← Back to lead queue</a>
+{% extends "base.html" %}
+{% block title %}{{ customer.name }} — IDBI Prospect Assist AI{% endblock %}
+
+{% block content %}
+<a class="back-link" href="/">Back to lead queue</a>
 
     <header class="detail-header">
       <div>
@@ -36,6 +30,73 @@
       <span class="mode-badge">{{ customer.scoring_mode|replace('_', ' ') }}</span>
       {% endif %}
     </section>
+
+    {% if tier_explanation %}
+    <details class="tier-why arch-section" open>
+      <summary><h2>Why this tier?</h2></summary>
+      <ul class="reasons">
+        {% for line in tier_explanation %}
+        <li>{{ line }}</li>
+        {% endfor %}
+      </ul>
+      <p class="section-note">Underwriter explainability — top rule signals{% if customer.ml_enhancement and customer.ml_enhancement.applied %} plus safe ML nudge{% endif %}.</p>
+    </details>
+    {% endif %}
+
+    {% if rm_brief %}
+    <section class="genai-section">
+      <h2>RM Call Brief <span class="badge">GenAI-ready</span></h2>
+      <div class="genai-brief">{{ rm_brief.brief_html | safe }}</div>
+      <p class="section-note">{{ rm_brief.disclaimer }} {{ rm_brief.source_label }}</p>
+    </section>
+    {% endif %}
+
+    <section class="spend-section">
+      <h2>Need vs Want vs Luxury</h2>
+      <div class="spend-chart">
+        <div class="spend-bar need" style="width: {{ (spend_breakdown.need * 100)|round(0) }}%">
+          <span>Need {{ (spend_breakdown.need * 100)|round(0) }}%</span>
+        </div>
+        <div class="spend-bar want" style="width: {{ (spend_breakdown.want * 100)|round(0) }}%">
+          <span>Want {{ (spend_breakdown.want * 100)|round(0) }}%</span>
+        </div>
+        <div class="spend-bar luxury" style="width: {{ (spend_breakdown.luxury * 100)|round(0) }}%">
+          <span>Luxury {{ (spend_breakdown.luxury * 100)|round(0) }}%</span>
+        </div>
+      </div>
+      <p class="section-note">AMA requirement: segregate essential, discretionary, and luxury spend from transaction behaviour.</p>
+    </section>
+
+    {% if timeline %}
+    <section class="timeline-section">
+      <h2>30-Day Transaction Timeline</h2>
+      <p class="section-note">{{ timeline.transaction_count }} tagged events · Credits ₹{{ "{:,}".format(timeline.total_credits) }} · Debits ₹{{ "{:,}".format(timeline.total_debits) }}</p>
+      <div class="table-wrap">
+        <table class="timeline-table">
+          <thead>
+            <tr><th>Date</th><th>Type</th><th>Category</th><th>Label</th><th>Amount</th><th>Tag</th><th>Location</th></tr>
+          </thead>
+          <tbody>
+            {% for e in timeline.entries %}
+            <tr class="txn-{{ e.type }}">
+              <td>{{ e.date }}</td>
+              <td>{{ e.type|title }}</td>
+              <td>{{ e.category|replace('_', ' ') }}</td>
+              <td>{{ e.label }}</td>
+              <td>₹{{ "{:,}".format(e.amount) }}</td>
+              <td><span class="txn-tag txn-tag-{{ e.tag }}">{{ e.tag }}</span></td>
+              <td>{{ e.location }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <p class="export-actions">
+      <a class="page-btn" href="/api/customer/{{ customer.customer_id }}/underwriter-pdf">Download Underwriter Packet (PDF)</a>
+    </p>
 
     {% if customer.income_analysis and customer.income_analysis.inferred_monthly_income %}
     <section class="enrichment-section">
@@ -71,6 +132,10 @@
     {% if customer.geo_stability %}
     <section class="geo-section">
       <h2>Geolocation Stability</h2>
+      <div class="geo-map-mock">
+        <div class="geo-pin">{{ customer.city }}</div>
+        <p>Transaction geo-consistency: {{ (customer.geo_stability.geo_consistency * 100)|round(0) }}%</p>
+      </div>
       <div class="detail-kv">
         <div><span>Geo score</span><strong>{{ customer.geo_stability.score }}</strong></div>
         <div><span>Consistency</span><strong>{{ (customer.geo_stability.geo_consistency * 100)|round(0) }}%</strong></div>
@@ -246,6 +311,4 @@
         <div><span>Relationship years</span><strong>{{ raw.relationship_years }}</strong></div>
       </div>
     </section>
-  </div>
-</body>
-</html>
+{% endblock %}
