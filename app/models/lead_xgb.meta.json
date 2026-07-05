@@ -17,8 +17,11 @@
     "loan_page_visits_30d",
     "loan_calculator_uses",
     "bureau_enquiries_90d",
+    "bureau_normalized_score",
     "credit_score_ordinal",
     "employment_ordinal",
+    "upi_discipline_hint",
+    "merchant_diversity_score",
     "pays_rent",
     "has_existing_home_loan",
     "has_auto_emi",
@@ -27,12 +30,65 @@
     "electronics_shopping_flag",
     "festival_season_spend_spike",
     "has_other_bank_accounts",
+    "multi_bank_income_share",
+    "geo_transaction_consistency",
+    "avg_session_minutes",
+    "has_mortgage",
     "application_started",
     "window_shopping_flag"
   ],
   "metrics": {
-    "validation_score_mae": 2.22,
-    "validation_tier_accuracy": 0.881,
-    "train_rows": 3200
+    "validation_score_mae": 2.32,
+    "validation_score_r2": 0.952,
+    "validation_tier_accuracy": 0.802,
+    "train_rows": 3200,
+    "validation_rows": 800,
+    "validation_split": "80/20 stratified by tier",
+    "tier_precision": {
+      "Quality Lead": 0.848,
+      "Serious": 0.725,
+      "Interested": 0.838,
+      "Window-shop Risk": 1.0
+    },
+    "tier_recall": {
+      "Quality Lead": 0.549,
+      "Serious": 0.802,
+      "Interested": 0.889,
+      "Window-shop Risk": 0.709
+    },
+    "confusion_matrix": {
+      "labels": [
+        "Quality Lead",
+        "Serious",
+        "Interested",
+        "Window-shop Risk"
+      ],
+      "matrix": [
+        [
+          56,
+          46,
+          0,
+          0
+        ],
+        [
+          10,
+          227,
+          46,
+          0
+        ],
+        [
+          0,
+          40,
+          320,
+          0
+        ],
+        [
+          0,
+          0,
+          16,
+          39
+        ]
+      ]
+    }
   }
 }

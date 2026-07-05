@@ -39,9 +39,13 @@ def quality_customer() -> dict:
         "upi_retail_transactions": 10,
         "credit_score_band": "A",
         "has_other_bank_accounts": True,
+        "multi_bank_income_share": 0.2,
+        "monthly_credit_inflow": 115000,
+        "geo_transaction_consistency": 0.88,
         "bureau_enquiries_90d": 1,
         "loan_page_visits_30d": 6,
         "loan_calculator_uses": 4,
+        "avg_session_minutes": 8.5,
         "application_started": True,
         "window_shopping_flag": False,
     }
@@ -63,3 +67,20 @@ def window_shopper() -> dict:
         }
     )
     return base
+
+
+@pytest.fixture(scope="session")
+def trained_model():
+    import app.ml_model as mm
+    from app.ml_model import LeadMLModel
+
+    mm._model = None
+    model = LeadMLModel()
+    if not model.load():
+        from scripts.train_model import main as train_main
+
+        train_main()
+        mm._model = None
+        model.load()
+    yield
+    mm._model = None

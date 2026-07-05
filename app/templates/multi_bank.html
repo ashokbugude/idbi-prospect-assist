@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-bank Analysis — Prospect Assist AI</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="container">
+    <a class="back-link" href="/">← Back to dashboard</a>
+
+    <header>
+      <span class="badge">Holistic Income</span>
+      <h1>Multi-bank Analysis</h1>
+      <p class="subtitle">
+        Cross-bank statement view — compare IDBI stated income vs inferred vs holistic repayment capacity (AMA requirement).
+      </p>
+    </header>
+
+    <section class="arch-section upload-section">
+      <h2>Simulate Other-Bank Statement Upload</h2>
+      <form class="filters" id="multibank-form">
+        <label>
+          Customer ID
+          <select name="customer_id" required>
+            {% for c in all_customers %}
+            {% if c.has_other_bank_accounts %}
+            <option value="{{ c.customer_id }}">{{ c.customer_id }} — {{ c.name }}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Other bank monthly inflow (₹)
+          <input type="number" name="other_bank_monthly_inflow" min="0" step="1000" placeholder="e.g. 45000" required />
+        </label>
+        <button type="submit">Analyze &amp; Re-score</button>
+      </form>
+      <pre id="multibank-result" class="arch-diagram" hidden></pre>
+    </section>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Tier</th>
+            <th>Stated</th>
+            <th>IDBI Inferred</th>
+            <th>Holistic</th>
+            <th>EMI Uplift</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in customers %}
+          <tr>
+            <td>
+              <strong>{{ c.name }}</strong><br />
+              <small>{{ c.customer_id }}</small>
+            </td>
+            <td><span class="tier {{ c.lead_tier_css }}">{{ c.lead_tier }}</span></td>
+            <td>₹{{ "{:,}".format(c.monthly_income) }}</td>
+            <td>₹{{ "{:,}".format(c.inferred_monthly_income or c.monthly_income) }}</td>
+            <td>₹{{ "{:,}".format(c.holistic_monthly_income or c.inferred_monthly_income or c.monthly_income) }}</td>
+            <td>
+              {% if c.multibank_analysis %}
+              +{{ c.multibank_analysis.emi_uplift_pct }}%
+              {% else %}—{% endif %}
+            </td>
+            <td><a href="/customer/{{ c.customer_id }}">View</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    document.getElementById('multibank-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const res = await fetch('/api/multi-bank/analyze', { method: 'POST', body: fd });
+      const data = await res.json();
+      const el = document.getElementById('multibank-result');
+      el.hidden = false;
+      el.textContent = JSON.stringify(data, null, 2);
+    });
+  </script>
+</body>
+</html>

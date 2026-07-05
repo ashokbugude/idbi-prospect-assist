@@ -18,9 +18,16 @@
           instead of ~1% converting window shoppers.
         </p>
       </div>
+      <nav class="top-nav">
+        <a href="/impact">Impact</a>
+        <a href="/ml">ML Report</a>
+        <a href="/multi-bank">Multi-bank</a>
+        <a href="/architecture">Architecture</a>
+        <a href="/api/rm-queue/export">Export RM CSV</a>
+      </nav>
     </header>
 
-    <section class="stats stats-4">
+    <section class="stats stats-5">
       <div class="stat-card">
         <div class="label">In Pipeline</div>
         <div class="value">{{ stats.total }}</div>
@@ -37,9 +44,19 @@
         <div class="label">Window-shop Risk</div>
         <div class="value">{{ stats.window_shop }}</div>
       </div>
+      <div class="stat-card highlight-teal">
+        <div class="label">Multi-bank View</div>
+        <div class="value">{{ stats.multi_bank }}</div>
+      </div>
     </section>
 
-    <p class="insight-banner">{{ stats.conversion_story }} · RM time saved on low-intent leads: ~{{ stats.rm_time_saved_pct }}%</p>
+    <p class="insight-banner">
+      {{ stats.conversion_story }}
+      {% if stats.meets_track02_target %}
+      <span class="target-met">✓ Track 02 target met</span>
+      {% endif %}
+      · RM time saved: ~{{ stats.rm_time_saved_pct }}%
+    </p>
 
     <section class="rm-queue-section">
       <h2>Today's RM Priority Queue</h2>
@@ -78,6 +95,10 @@
         Min composite score
         <input type="number" name="min_score" min="0" max="100" value="{{ min_score }}" />
       </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="multi_bank" value="true" {% if multi_bank %}checked{% endif %} />
+        Multi-bank customers only
+      </label>
       <button type="submit">Apply filters</button>
     </form>
 
@@ -102,6 +123,12 @@
               </a><br />
               <small>{{ customer.customer_id }} · {{ customer.city }}</small><br />
               <small>{{ customer.employment_type|replace('_', ' ')|title }} · ₹{{ "{:,}".format(customer.monthly_income) }}/mo</small>
+              {% if customer.inferred_monthly_income and customer.inferred_monthly_income != customer.monthly_income %}
+              <br /><small class="inferred-tag">Inferred ₹{{ "{:,}".format(customer.inferred_monthly_income) }}/mo</small>
+              {% endif %}
+              {% if customer.has_other_bank_accounts %}
+              <br /><small class="multi-bank-tag">Multi-bank holistic view</small>
+              {% endif %}
             </td>
             <td>
               <span class="tier {{ customer.lead_tier_css }}">{{ customer.lead_tier }}</span>
@@ -123,7 +150,8 @@
     </div>
 
     <footer>
-      Prototype v0.4 — Hybrid rules + XGBoost on synthetic data. Post-shortlist: IDBI sandbox APIs on AWS.
+      Prototype v0.5 — Hybrid rules + XGBoost · <a href="/architecture">Architecture</a> ·
+      <a href="/api/sandbox/IDBI-L00001">Sandbox API stub</a>
     </footer>
   </div>
 </body>

@@ -5,10 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-PRODUCTS = ("home_loan", "auto_loan", "personal_loan", "consumer_durable")
+PRODUCTS = ("home_loan", "mortgage_loan", "auto_loan", "personal_loan", "consumer_durable")
 
 PRODUCT_LABELS = {
     "home_loan": "Home Loan",
+    "mortgage_loan": "Mortgage Loan",
     "auto_loan": "Auto Loan",
     "personal_loan": "Personal Loan",
     "consumer_durable": "Consumer Durable Loan",
@@ -28,10 +29,13 @@ TIER_CSS = {
 # Minimum indicative EMI capacity required per product (₹/month).
 PRODUCT_MIN_EMI = {
     "home_loan": 15000,
+    "mortgage_loan": 18000,
     "auto_loan": 7000,
     "personal_loan": 3500,
     "consumer_durable": 2000,
 }
+
+TARGET_QUALITY_CONVERSION_PCT = 32.0  # Hack2skill Track 02 expected outcome
 
 BASELINE_CONVERSION_RATE = 0.01  # IDBI stated ~1% lead conversion today
 
@@ -59,11 +63,16 @@ def score_repayment_capacity(customer: dict) -> DimensionScore:
     score = 0.0
     reasons: list[str] = []
 
+    income = customer.get("monthly_income_for_scoring") or customer.get("monthly_income", 0)
+    inferred = customer.get("inferred_monthly_income")
+    if inferred and inferred != customer.get("monthly_income"):
+        reasons.append(
+            f"Txn-inferred income ₹{inferred:,}/mo (confidence {customer.get('income_confidence', 0):.0%})"
+        )
+
     disposable = customer.get("estimated_monthly_disposable")
     if disposable is None:
-        income = customer.get("monthly_income", 0)
         disposable = int(income * 0.25) if income else 0
-    income = customer.get("monthly_income", 1)
     disposable_ratio = disposable / income if income else 0
 
     if disposable_ratio >= 0.35:
@@ -110,9 +119,18 @@ def score_repayment_capacity(customer: dict) -> DimensionScore:
         score += 10
         reasons.append("Favorable bureau/credit band")
 
+    bureau = customer.get("bureau_analysis", {})
+    if bureau.get("normalized_score", 0) >= 75:
+        score += 12
+        reasons.append(f"Strong bureau profile ({bureau.get('bureau_score', 0)} score)")
+    elif bureau.get("normalized_score", 100) < 45:
+        score -= 10
+        reasons.append(bureau.get("underwriting_hint", "Weak bureau — capacity capped"))
+
     if customer.get("has_other_bank_accounts"):
         score += 8
-        reasons.append("Multi-account view enables holistic repayment assessment")
+        holistic = customer.get("holistic_monthly_income", income)
+        reasons.append(f"Multi-bank holistic income view ~₹{holistic:,}/mo")
 
     affordable_emi = int(disposable * 0.45)
     return DimensionScore(
@@ -166,6 +184,15 @@ def score_behavioral_discipline(customer: dict) -> DimensionScore:
         score -= 10
         reasons.append("Multiple recent credit enquiries — possible rate shopping")
 
+    upi = customer.get("upi_behavior", {})
+    if upi.get("discipline_hint", 50) >= 65:
+        score += 10
+        if upi.get("reasons"):
+            reasons.append(upi["reasons"][0])
+    elif upi.get("discipline_hint", 50) < 42:
+        score -= 12
+        reasons.append("UPI spend mix indicates weak financial discipline")
+
     balance = customer.get("avg_monthly_balance", 0)
     income = customer.get("monthly_income", 1)
     if balance >= income * 0.5:
@@ -207,6 +234,14 @@ def score_intent(customer: dict) -> DimensionScore:
 
     visits = customer.get("loan_page_visits_30d", 0)
     calc = customer.get("loan_calculator_uses", 0)
+    session_mins = float(customer.get("avg_session_minutes", 0))
+    if session_mins >= 5 and calc >= 1:
+        score += 15
+        reasons.append(f"Deep engagement — avg {session_mins:.1f} min/session on loan journeys")
+    elif session_mins < 1.5 and visits >= 4:
+        score -= 12
+        reasons.append("Shallow browsing — low time-on-site suggests window shopping")
+
     if visits >= 8 and calc == 0 and not customer.get("application_started"):
         score -= 15
         reasons.append("High page views with no calculator use — low seriousness")
@@ -226,10 +261,38 @@ def score_intent(customer: dict) -> DimensionScore:
         details={
             "loan_page_visits_30d": visits,
             "loan_calculator_uses": calc,
+            "avg_session_minutes": session_mins,
             "application_started": customer.get("application_started", False),
             "window_shopping_flag": customer.get("window_shopping_flag", False),
         },
     )
+
+
+def _composite_score(
+    repayment: DimensionScore,
+    behavior: DimensionScore,
+    intent: DimensionScore,
+    customer: dict,
+) -> float:
+    """Four-pillar composite: repayment, intent, discipline, delinquency safety."""
+    delinq = customer.get("delinquency_risk", {})
+    delinq_safety = max(0, 100 - float(delinq.get("score", 25)))
+
+    composite = (
+        0.33 * repayment.score
+        + 0.28 * intent.score
+        + 0.22 * behavior.score
+        + 0.17 * delinq_safety
+    )
+
+    bureau = customer.get("bureau_analysis", {})
+    norm = bureau.get("normalized_score", 55)
+    if norm >= 75:
+        composite += 3
+    elif norm < 45:
+        composite -= 5
+
+    return round(_clamp(composite), 1)
 
 
 def assign_lead_tier(
@@ -238,23 +301,27 @@ def assign_lead_tier(
     intent: DimensionScore,
     customer: dict,
 ) -> str:
+    delinq = customer.get("delinquency_risk", {})
+    delinq_band = delinq.get("risk_band", "Low")
+    composite = _composite_score(repayment, behavior, intent, customer)
+
     if customer.get("window_shopping_flag") and intent.score < 55:
         return "Window-shop Risk"
 
-    composite = (
-        0.40 * repayment.score
-        + 0.35 * intent.score
-        + 0.25 * behavior.score
-    )
+    if delinq_band == "High" and behavior.score < 48:
+        if intent.score < 40 or customer.get("window_shopping_flag"):
+            return "Window-shop Risk"
+        return "Interested"
 
     if (
         composite >= 72
         and repayment.score >= 58
         and intent.score >= 50
         and behavior.score >= 48
+        and delinq_band != "High"
     ):
         return "Quality Lead"
-    if composite >= 55 and repayment.score >= 42 and intent.score >= 35:
+    if composite >= 55 and repayment.score >= 42 and intent.score >= 35 and delinq_band != "High":
         return "Serious"
     if composite >= 32:
         return "Interested"
@@ -310,6 +377,37 @@ def score_home_loan(customer: dict, affordable: int) -> ScoreResult:
         reasons.append("General liability profile reviewed for housing need")
 
     return ScoreResult("home_loan", _clamp(score), reasons[:3])
+
+
+def score_mortgage_loan(customer: dict, affordable: int) -> ScoreResult:
+    score = 0.0
+    reasons: list[str] = []
+
+    if not _product_eligible(customer, "mortgage_loan", affordable):
+        return ScoreResult(
+            "mortgage_loan",
+            0.0,
+            [f"Affordable EMI (~₹{affordable:,}) below mortgage threshold"],
+        )
+
+    income = customer.get("monthly_income_for_scoring") or customer.get("monthly_income", 0)
+    if income >= 80000:
+        score += 25
+        reasons.append("Income supports mortgage refinance/top-up capacity")
+    if customer.get("has_existing_home_loan") or customer.get("has_mortgage"):
+        score += 30
+        reasons.append("Existing housing exposure — mortgage product fit")
+    if customer.get("pays_rent") and not customer.get("has_existing_home_loan"):
+        score += 10
+        reasons.append("Rent payer may convert to mortgage-backed housing")
+    if customer.get("salary_stability_months", 0) >= 6:
+        score += 15
+        reasons.append("Stable income supports long-tenor mortgage")
+
+    if not reasons:
+        reasons.append("Mortgage assessed from property and cashflow signals")
+
+    return ScoreResult("mortgage_loan", _clamp(score), reasons[:3])
 
 
 def score_auto_loan(customer: dict, affordable: int) -> ScoreResult:
@@ -401,6 +499,7 @@ def score_consumer_durable(customer: dict, affordable: int) -> ScoreResult:
 
 SCORERS = {
     "home_loan": score_home_loan,
+    "mortgage_loan": score_mortgage_loan,
     "auto_loan": score_auto_loan,
     "personal_loan": score_personal_loan,
     "consumer_durable": score_consumer_durable,
@@ -415,6 +514,9 @@ def _score_products(customer: dict, affordable: int) -> list[ScoreResult]:
 
 def score_customer_rules(customer: dict) -> dict:
     """Rule-based scoring only — used as ML teacher labels and safe fallback."""
+    from app.enrichment import enrich_customer
+
+    customer = enrich_customer(customer)
     repayment = score_repayment_capacity(customer)
     behavior = score_behavioral_discipline(customer)
     intent = score_intent(customer)
@@ -424,10 +526,7 @@ def score_customer_rules(customer: dict) -> dict:
     product_results = _score_products(customer, affordable)
     top = product_results[0]
 
-    composite_lead_score = round(
-        0.40 * repayment.score + 0.35 * intent.score + 0.25 * behavior.score,
-        1,
-    )
+    composite_lead_score = _composite_score(repayment, behavior, intent, customer)
 
     return {
         "customer_id": customer["customer_id"],
@@ -436,6 +535,10 @@ def score_customer_rules(customer: dict) -> dict:
         "segment": customer.get("segment", "Retail"),
         "employment_type": customer.get("employment_type", "salaried"),
         "monthly_income": customer.get("monthly_income", 0),
+        "inferred_monthly_income": customer.get("inferred_monthly_income"),
+        "income_confidence": customer.get("income_confidence"),
+        "holistic_monthly_income": customer.get("holistic_monthly_income"),
+        "has_other_bank_accounts": customer.get("has_other_bank_accounts", False),
         "affordable_emi_estimate": affordable,
         "lead_tier": lead_tier,
         "lead_tier_css": TIER_CSS[lead_tier],
@@ -455,6 +558,18 @@ def score_customer_rules(customer: dict) -> dict:
             "reasons": intent.reasons,
             "details": intent.details,
         },
+        "delinquency_risk": customer.get("delinquency_risk", {}),
+        "geo_stability": customer.get("geo_stability", {}),
+        "bureau_analysis": customer.get("bureau_analysis", {}),
+        "upi_behavior": customer.get("upi_behavior", {}),
+        "multibank_analysis": customer.get("multibank_analysis", {}),
+        "income_analysis": {
+            "inferred_monthly_income": customer.get("inferred_monthly_income"),
+            "stated_monthly_income": customer.get("stated_monthly_income"),
+            "income_confidence": customer.get("income_confidence"),
+            "method": customer.get("income_inference_method"),
+            "variance_pct": customer.get("income_variance_pct"),
+        },
         "top_product": top.product,
         "top_product_label": PRODUCT_LABELS[top.product],
         "top_score": round(top.score, 1),
@@ -471,6 +586,39 @@ def score_customer_rules(customer: dict) -> dict:
         "recommended_action": _recommended_action(lead_tier, top.product),
         "lead_priority": lead_tier,
         "rm_call_eligible": lead_tier in ("Quality Lead", "Serious"),
+        "rm_workflow": _rm_workflow(lead_tier, top.product, customer),
+    }
+
+
+def _rm_workflow(tier: str, product: str, customer: dict) -> dict:
+    """RM-facing next steps — speaks loan officer language (AMA)."""
+    product_label = PRODUCT_LABELS[product]
+    delinq = customer.get("delinquency_risk", {})
+    steps = {
+        "Quality Lead": [
+            "Priority callback within 24h",
+            f"Pitch {product_label} with pre-qualified EMI capacity",
+            "Share bureau + income inference summary with underwriter",
+        ],
+        "Serious": [
+            "Schedule assisted digital journey within 48h",
+            f"EMI calculator follow-up for {product_label}",
+            "Confirm multi-bank income if holistic view applied",
+        ],
+        "Interested": [
+            "Automated nurture — financial literacy + EMI nudge",
+            "Re-score after 30d if application started",
+        ],
+        "Window-shop Risk": [
+            "No RM call — deprioritize queue",
+            "Send education content only",
+        ],
+    }
+    return {
+        "steps": steps.get(tier, ["Manual review"]),
+        "sla_hours": 24 if tier == "Quality Lead" else 48 if tier == "Serious" else None,
+        "delinquency_flag": delinq.get("rag") == "red",
+        "underwriter_packet": tier in ("Quality Lead", "Serious"),
     }
 
 
@@ -510,37 +658,13 @@ def _recommended_action(tier: str, product: str) -> str:
 
 
 def compute_impact_metrics(customers: list[dict]) -> dict:
-    """Simulate operational lift vs IDBI's ~1% baseline conversion."""
-    ranked = rank_customers(customers)
-    total = len(ranked)
-    if total == 0:
-        return {}
+    """Business impact metrics — delegates to documented impact model."""
+    from app.impact import compute_business_impact
 
-    quality = sum(1 for c in ranked if c["lead_tier"] == "Quality Lead")
-    serious = sum(1 for c in ranked if c["lead_tier"] == "Serious")
-    window = sum(1 for c in ranked if c["lead_tier"] == "Window-shop Risk")
-    rm_queue = quality + serious
-
-    # Illustrative projected conversion on RM-actionable queue only.
-    projected_rate = min(
-        0.38,
-        BASELINE_CONVERSION_RATE
-        + (quality / total) * 0.28
-        + (serious / total) * 0.12,
-    )
-
-    return {
-        "total_leads": total,
-        "baseline_conversion_pct": round(BASELINE_CONVERSION_RATE * 100, 1),
-        "projected_conversion_pct": round(projected_rate * 100, 1),
-        "rm_actionable_leads": rm_queue,
-        "rm_queue_pct": round(rm_queue / total * 100, 1),
-        "window_shop_filtered_pct": round(window / total * 100, 1),
-        "estimated_rm_time_saved_pct": round(window / total * 100 * 0.7, 1),
-        "tier_distribution": {
-            t: sum(1 for c in ranked if c["lead_tier"] == t) for t in LEAD_TIERS
-        },
-    }
+    impact = compute_business_impact(customers)
+    # Legacy keys used by dashboard
+    impact["projected_conversion_pct"] = impact.get("rm_queue_conversion_pct", 0)
+    return impact
 
 
 def rank_customers(customers: list[dict]) -> list[dict]:

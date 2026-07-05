@@ -12,19 +12,8 @@ from app.scoring import score_customer, score_customer_rules
 
 @pytest.fixture(scope="session")
 def trained_model():
-    import app.ml_model as mm
-    from app.ml_model import LeadMLModel
-
-    mm._model = None
-    model = LeadMLModel()
-    if not model.load():
-        from scripts.train_model import main as train_main
-
-        train_main()
-        mm._model = None
-        model.load()
+    """Provided by tests/conftest.py — no-op alias for clarity."""
     yield
-    mm._model = None
 
 
 def test_ml_nudge_bounded(quality_customer, trained_model):

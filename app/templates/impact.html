@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Business Impact — Prospect Assist AI</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="container">
+    <a class="back-link" href="/">← Back to dashboard</a>
+
+    <header>
+      <span class="badge">Track 02 Proof</span>
+      <h1>Business Impact Model</h1>
+      <p class="subtitle">
+        Documented conversion lift vs IDBI's ~1% baseline — RM-prioritized outreach on Quality + Serious leads.
+      </p>
+    </header>
+
+    {% if impact.meets_track02_conversion_target %}
+    <p class="insight-banner target-met-banner">
+      ✓ Track 02 target met — Quality segment projected at {{ impact.quality_lead_conversion_pct }}%
+      (target {{ impact.quality_conversion_target_pct }}%)
+    </p>
+    {% endif %}
+
+    <section class="stats stats-4">
+      <div class="stat-card">
+        <div class="label">Baseline (all leads)</div>
+        <div class="value">{{ impact.baseline_conversion_pct }}%</div>
+      </div>
+      <div class="stat-card highlight-green">
+        <div class="label">RM Queue Conversion</div>
+        <div class="value">{{ impact.rm_queue_conversion_pct }}%</div>
+      </div>
+      <div class="stat-card highlight-teal">
+        <div class="label">Quality Segment</div>
+        <div class="value">{{ impact.quality_lead_conversion_pct }}%</div>
+      </div>
+      <div class="stat-card highlight-blue">
+        <div class="label">RM Time Saved</div>
+        <div class="value">{{ impact.estimated_rm_time_saved_pct }}%</div>
+      </div>
+    </section>
+
+    <section class="arch-section">
+      <h2>Proof Summary</h2>
+      <div class="detail-kv wide">
+        {% for key, val in impact.proof_summary.items() %}
+        <div><span>{{ key|replace('_', ' ')|title }}</span>
+          <strong class="{% if val %}rag-green{% else %}rag-red{% endif %}">{{ "Yes" if val else "No" }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="arch-section">
+      <h2>Monte Carlo Backtest ({{ impact.conversion_backtest.trials }} trials)</h2>
+      <p class="section-note">{{ impact.conversion_backtest.methodology }}</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Strategy</th><th>Mean %</th><th>90% CI</th><th>% Contacted</th></tr>
+          </thead>
+          <tbody>
+            {% for name, s in impact.conversion_backtest.strategies.items() %}
+            <tr>
+              <td>{{ name|replace('_', ' ') }}</td>
+              <td>{{ s.mean_conversion_pct }}%</td>
+              <td>{{ s.ci_90_low_pct }}–{{ s.ci_90_high_pct }}%</td>
+              <td>{{ s.avg_contacted_pct }}%</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="section-note">
+        RM lift: <strong>{{ impact.conversion_backtest.lift_vs_baseline.rm_queue_lift_multiplier }}×</strong> baseline ·
+        Quality segment: +{{ impact.conversion_backtest.lift_vs_baseline.quality_segment_lift_pct }} pp
+      </p>
+    </section>
+
+    <section class="arch-section">
+      <h2>Scenario Analysis</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Scenario</th><th>RM Queue %</th><th>Quality %</th><th>Assumption</th></tr></thead>
+          <tbody>
+            {% for name, s in impact.scenario_analysis.items() %}
+            <tr>
+              <td>{{ name|title }}</td>
+              <td>{{ s.rm_queue_pct }}%</td>
+              <td>{{ s.quality_segment_pct }}%</td>
+              <td>{{ s.assumption }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="arch-section">
+      <h2>ML Prioritization Uplift</h2>
+      <div class="detail-kv wide">
+        <div><span>Quality preservation</span><strong>{{ impact.ml_prioritization_uplift.quality_preservation_pct }}%</strong></div>
+        <div><span>Window-shop detection lift</span><strong>{{ impact.ml_prioritization_uplift.window_shop_detection_lift_pct }}%</strong></div>
+        <div><span>ML nudge rate</span><strong>{{ impact.ml_prioritization_uplift.ml_nudge_rate_pct }}%</strong></div>
+      </div>
+    </section>
+
+    <section class="arch-section">
+      <h2>Conversion Funnel (per 10,000 leads)</h2>
+      <div class="detail-kv wide">
+        <div><span>Loans before (1% spray)</span><strong>{{ impact.projected_annual_loans_before }}</strong></div>
+        <div><span>Loans after RM prioritization</span><strong>{{ impact.projected_annual_loans_after }}</strong></div>
+        <div><span>Incremental loans</span><strong>+{{ impact.incremental_loans_per_10k_leads }}</strong></div>
+        <div><span>Portfolio uplift (illustrative)</span><strong>₹{{ impact.incremental_portfolio_value_cr }} Cr</strong></div>
+        <div><span>RM calls before</span><strong>{{ impact.rm_calls_before }} / {{ impact.total_leads }}</strong></div>
+        <div><span>RM calls after</span><strong>{{ impact.rm_calls_after }} / {{ impact.total_leads }}</strong></div>
+      </div>
+    </section>
+
+    <section class="arch-section">
+      <h2>Tier Distribution</h2>
+      <div class="detail-kv wide">
+        {% for tier, count in impact.tier_distribution.items() %}
+        <div><span>{{ tier }}</span><strong>{{ count }} ({{ (count / impact.total_leads * 100)|round(1) }}%)</strong></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="arch-section">
+      <h2>Methodology</h2>
+      <ul class="reasons methodology-list">
+        <li><strong>Baseline:</strong> {{ impact.methodology.baseline }}</li>
+        <li><strong>Quality target:</strong> {{ impact.methodology.quality_target }}</li>
+        <li><strong>RM strategy:</strong> {{ impact.methodology.rm_strategy }}</li>
+        <li><strong>Quality formula:</strong> {{ impact.methodology.quality_formula }}</li>
+        <li><strong>Tier conversion assumptions:</strong>
+          {% for tier, rate in impact.methodology.tier_rates.items() %}
+          {{ tier }} {{ rate }}{% if not loop.last %}, {% endif %}
+          {% endfor %}
+        </li>
+        <li><em>{{ impact.methodology.disclaimer }}</em></li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>

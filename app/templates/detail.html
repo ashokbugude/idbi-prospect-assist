@@ -18,6 +18,9 @@
           {{ customer.customer_id }} · {{ customer.city }} ·
           {{ customer.employment_type|replace('_', ' ')|title }} ·
           ₹{{ "{:,}".format(customer.monthly_income) }}/month
+          {% if customer.inferred_monthly_income %}
+          · Inferred ₹{{ "{:,}".format(customer.inferred_monthly_income) }}/mo
+          {% endif %}
         </p>
       </div>
       <div class="detail-tier-wrap">
@@ -33,6 +36,106 @@
       <span class="mode-badge">{{ customer.scoring_mode|replace('_', ' ') }}</span>
       {% endif %}
     </section>
+
+    {% if customer.income_analysis and customer.income_analysis.inferred_monthly_income %}
+    <section class="enrichment-section">
+      <h2>Income Inference &amp; Multi-bank View</h2>
+      <div class="detail-kv wide">
+        <div><span>Stated income</span><strong>₹{{ "{:,}".format(customer.income_analysis.stated_monthly_income or customer.monthly_income) }}</strong></div>
+        <div><span>Inferred income</span><strong>₹{{ "{:,}".format(customer.income_analysis.inferred_monthly_income) }}</strong></div>
+        <div><span>Confidence</span><strong>{{ (customer.income_analysis.income_confidence * 100)|round(0) }}%</strong></div>
+        <div><span>Variance</span><strong>{{ customer.income_analysis.variance_pct }}%</strong></div>
+        {% if customer.holistic_monthly_income %}
+        <div><span>Holistic (multi-bank)</span><strong>₹{{ "{:,}".format(customer.holistic_monthly_income) }}</strong></div>
+        {% endif %}
+      </div>
+      <p class="section-note">{{ customer.income_analysis.method }}</p>
+    </section>
+    {% endif %}
+
+    {% if customer.delinquency_risk %}
+    <section class="risk-section">
+      <h2>Delinquency Risk (12-month outlook)</h2>
+      <div class="detail-kv">
+        <div><span>Risk score</span><strong>{{ customer.delinquency_risk.score }}</strong></div>
+        <div><span>Band</span><strong class="rag-{{ customer.delinquency_risk.rag }}">{{ customer.delinquency_risk.risk_band }}</strong></div>
+      </div>
+      <ul class="reasons">
+        {% for reason in customer.delinquency_risk.reasons %}
+        <li>{{ reason }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if customer.geo_stability %}
+    <section class="geo-section">
+      <h2>Geolocation Stability</h2>
+      <div class="detail-kv">
+        <div><span>Geo score</span><strong>{{ customer.geo_stability.score }}</strong></div>
+        <div><span>Consistency</span><strong>{{ (customer.geo_stability.geo_consistency * 100)|round(0) }}%</strong></div>
+      </div>
+      <ul class="reasons">
+        {% for reason in customer.geo_stability.reasons %}
+        <li>{{ reason }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if customer.bureau_analysis %}
+    <section class="bureau-section">
+      <h2>Credit Bureau Analysis</h2>
+      <div class="detail-kv wide">
+        <div><span>Bureau score</span><strong>{{ customer.bureau_analysis.bureau_score }}</strong></div>
+        <div><span>Normalized</span><strong class="rag-{{ customer.bureau_analysis.rag }}">{{ customer.bureau_analysis.normalized_score }}/100</strong></div>
+        <div><span>Band</span><strong>{{ customer.bureau_analysis.credit_band }} ({{ customer.bureau_analysis.band_label }})</strong></div>
+        <div><span>Utilization</span><strong>{{ customer.bureau_analysis.credit_utilization_pct }}%</strong></div>
+        <div><span>Active accounts</span><strong>{{ customer.bureau_analysis.active_credit_accounts }}</strong></div>
+        <div><span>Repayment history</span><strong>{{ customer.bureau_analysis.repayment_history_months }} mo</strong></div>
+      </div>
+      <p class="section-note">{{ customer.bureau_analysis.underwriting_hint }}</p>
+      <ul class="reasons">
+        {% for reason in customer.bureau_analysis.reasons %}
+        <li>{{ reason }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if customer.upi_behavior %}
+    <section class="upi-section">
+      <h2>UPI Merchant Behaviour</h2>
+      <div class="detail-kv wide">
+        {% for cat, share in customer.upi_behavior.category_shares.items() %}
+        <div><span>{{ cat|title }}</span><strong>{{ (share * 100)|round(0) }}%</strong></div>
+        {% endfor %}
+        <div><span>Dominant</span><strong>{{ customer.upi_behavior.dominant_category|title }}</strong></div>
+        <div><span>Discipline hint</span><strong>{{ customer.upi_behavior.discipline_hint }}</strong></div>
+      </div>
+      <ul class="reasons">
+        {% for reason in customer.upi_behavior.reasons %}
+        <li>{{ reason }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if customer.rm_workflow %}
+    <section class="rm-workflow-section">
+      <h2>RM Workflow</h2>
+      <div class="detail-kv">
+        <div><span>SLA</span><strong>{% if customer.rm_workflow.sla_hours %}{{ customer.rm_workflow.sla_hours }}h{% else %}Nurture only{% endif %}</strong></div>
+        <div><span>Underwriter packet</span><strong>{{ "Yes" if customer.rm_workflow.underwriter_packet else "No" }}</strong></div>
+        <div><span>Delinquency flag</span><strong>{{ "Yes" if customer.rm_workflow.delinquency_flag else "No" }}</strong></div>
+      </div>
+      <ol class="rm-steps">
+        {% for step in customer.rm_workflow.steps %}
+        <li>{{ step }}</li>
+        {% endfor %}
+      </ol>
+    </section>
+    {% endif %}
 
     {% if customer.ml_enhancement and customer.ml_enhancement.enabled %}
     <section class="ml-section">
@@ -51,6 +154,17 @@
         <li>{{ reason }}</li>
         {% endfor %}
       </ul>
+      {% endif %}
+      {% if customer.ml_enhancement.feature_contributions %}
+      <h3>Top ML Feature Contributions</h3>
+      <div class="contrib-grid">
+        {% for fc in customer.ml_enhancement.feature_contributions[:6] %}
+        <div class="contrib-item">
+          <span>{{ fc.label }}</span>
+          <strong class="{% if fc.contribution > 0 %}contrib-pos{% else %}contrib-neg{% endif %}">{{ "%+.3f"|format(fc.contribution) }}</strong>
+        </div>
+        {% endfor %}
+      </div>
       {% endif %}
     </section>
     {% endif %}
@@ -82,6 +196,7 @@
         <div class="detail-kv">
           <div><span>Loan page visits (30d)</span><strong>{{ customer.purchase_intent.details.loan_page_visits_30d }}</strong></div>
           <div><span>Calculator uses</span><strong>{{ customer.purchase_intent.details.loan_calculator_uses }}</strong></div>
+          <div><span>Avg session (min)</span><strong>{{ customer.purchase_intent.details.avg_session_minutes }}</strong></div>
           <div><span>Application started</span><strong>{{ "Yes" if customer.purchase_intent.details.application_started else "No" }}</strong></div>
         </div>
       </article>
@@ -123,6 +238,8 @@
       <div class="detail-kv wide">
         <div><span>Savings transfer ratio</span><strong>{{ (raw.savings_transfer_ratio * 100)|round(0) }}%</strong></div>
         <div><span>Other bank accounts</span><strong>{{ "Yes" if raw.has_other_bank_accounts else "No" }}</strong></div>
+        <div><span>Multi-bank income share</span><strong>{{ (raw.multi_bank_income_share * 100)|round(0) if raw.multi_bank_income_share else 0 }}%</strong></div>
+        <div><span>Geo consistency</span><strong>{{ (raw.geo_transaction_consistency * 100)|round(0) if raw.geo_transaction_consistency else "—" }}%</strong></div>
         <div><span>Bureau enquiries (90d)</span><strong>{{ raw.bureau_enquiries_90d }}</strong></div>
         <div><span>Credit band</span><strong>{{ raw.credit_score_band }}</strong></div>
         <div><span>Window shopping flag</span><strong>{{ "Yes" if raw.window_shopping_flag else "No" }}</strong></div>

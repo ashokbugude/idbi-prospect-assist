@@ -41,8 +41,22 @@ def main() -> int:
     from app.ml_model import get_model
 
     ml_ready = get_model().is_ready
+    from app.ml_evaluation import get_ml_credibility_report
+
+    ml_report = get_ml_credibility_report(customers[:200])
+    ml_ready = ml_report.get("model_ready", False)
     if not ml_ready:
         errors.append("ML model not loaded — run: python scripts/train_model.py")
+    elif not all(ml_report.get("credibility_checks", {}).values()):
+        errors.append("ML credibility checks failed — see /ml")
+    if not impact.get("meets_track02_conversion_target"):
+        errors.append("Quality lead conversion below Track 02 target (32%)")
+    if not impact.get("proof_summary", {}).get("backtest_quality_meets_target"):
+        errors.append("Monte Carlo backtest: quality segment below 32% target")
+    if not impact.get("proof_summary", {}).get("conservative_quality_still_above_target"):
+        errors.append("Conservative scenario: quality segment below 32% target")
+    if impact.get("rm_queue_conversion_pct", 0) <= impact.get("baseline_conversion_pct", 1):
+        errors.append("RM queue conversion must exceed baseline")
     if ml_ready and hybrid_modes.get("hybrid", 0) == 0 and hybrid_modes.get("rules_fallback", 0) > 0:
         errors.append("ML model loaded but scoring fell back — check predict() errors")
 
@@ -62,7 +76,9 @@ def main() -> int:
     print(f"Customers scored: {len(ranked)}")
     print(f"Tier distribution: {impact['tier_distribution']}")
     print(f"Baseline conversion: {impact['baseline_conversion_pct']}%")
-    print(f"Projected (RM queue): {impact['projected_conversion_pct']}%")
+    print(f"RM queue conversion: {impact.get('rm_queue_conversion_pct', impact.get('projected_conversion_pct'))}%")
+    print(f"Quality segment conversion: {impact.get('quality_lead_conversion_pct')}%")
+    print(f"Track 02 target met: {impact.get('meets_track02_conversion_target')}")
     print(f"RM actionable leads: {impact['rm_actionable_leads']} ({impact['rm_queue_pct']}%)")
     print(f"Window-shop filtered: {impact['window_shop_filtered_pct']}%")
     print(f"ML model ready: {ml_ready}")

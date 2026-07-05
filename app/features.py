@@ -24,8 +24,11 @@ FEATURE_NAMES: list[str] = [
     "loan_page_visits_30d",
     "loan_calculator_uses",
     "bureau_enquiries_90d",
+    "bureau_normalized_score",
     "credit_score_ordinal",
     "employment_ordinal",
+    "upi_discipline_hint",
+    "merchant_diversity_score",
     "pays_rent",
     "has_existing_home_loan",
     "has_auto_emi",
@@ -34,6 +37,10 @@ FEATURE_NAMES: list[str] = [
     "electronics_shopping_flag",
     "festival_season_spend_spike",
     "has_other_bank_accounts",
+    "multi_bank_income_share",
+    "geo_transaction_consistency",
+    "avg_session_minutes",
+    "has_mortgage",
     "application_started",
     "window_shopping_flag",
 ]
@@ -55,8 +62,11 @@ FEATURE_LABELS: dict[str, str] = {
     "loan_page_visits_30d": "Loan page engagement",
     "loan_calculator_uses": "EMI calculator usage",
     "bureau_enquiries_90d": "Recent credit enquiries",
+    "bureau_normalized_score": "Bureau underwriting score",
     "credit_score_ordinal": "Credit bureau band",
     "employment_ordinal": "Employment type",
+    "upi_discipline_hint": "UPI spend discipline",
+    "merchant_diversity_score": "UPI merchant diversity",
     "pays_rent": "Rent payment pattern",
     "has_existing_home_loan": "Existing home loan",
     "has_auto_emi": "Existing auto EMI",
@@ -65,6 +75,10 @@ FEATURE_LABELS: dict[str, str] = {
     "electronics_shopping_flag": "Electronics spend signal",
     "festival_season_spend_spike": "Seasonal spend spike",
     "has_other_bank_accounts": "Multi-bank footprint",
+    "multi_bank_income_share": "Income share at other banks",
+    "geo_transaction_consistency": "Geo spend consistency",
+    "avg_session_minutes": "Session depth on loan journeys",
+    "has_mortgage": "Existing mortgage exposure",
     "application_started": "Application started",
     "window_shopping_flag": "Window-shopping pattern",
 }
@@ -75,9 +89,14 @@ def _log1p(value: float) -> float:
 
 
 def extract_features(customer: dict) -> list[float]:
-    income = float(customer.get("monthly_income", 0))
+    from app.enrichment import enrich_customer
+
+    customer = enrich_customer(customer)
+    income = float(customer.get("monthly_income_for_scoring") or customer.get("monthly_income", 0))
     disposable = float(customer.get("estimated_monthly_disposable", income * 0.25))
     balance = float(customer.get("avg_monthly_balance", 0))
+    bureau = customer.get("bureau_analysis", {})
+    upi = customer.get("upi_behavior", {})
 
     bools = [
         customer.get("pays_rent", False),
@@ -88,6 +107,7 @@ def extract_features(customer: dict) -> list[float]:
         customer.get("electronics_shopping_flag", False),
         customer.get("festival_season_spend_spike", False),
         customer.get("has_other_bank_accounts", False),
+        customer.get("has_mortgage", False),
         customer.get("application_started", False),
         customer.get("window_shopping_flag", False),
     ]
@@ -109,8 +129,14 @@ def extract_features(customer: dict) -> list[float]:
         float(customer.get("loan_page_visits_30d", 0)),
         float(customer.get("loan_calculator_uses", 0)),
         float(customer.get("bureau_enquiries_90d", 0)),
+        float(bureau.get("normalized_score", 55)),
         float(CREDIT_ORDINAL.get(customer.get("credit_score_band", "C"), 2)),
         float(EMPLOYMENT_ORDINAL.get(customer.get("employment_type", "salaried"), 0)),
+        float(upi.get("discipline_hint", 50)),
+        float(upi.get("merchant_diversity_score", 0.5)),
+        float(customer.get("multi_bank_income_share", 0)),
+        float(customer.get("geo_transaction_consistency", 0.7)),
+        float(customer.get("avg_session_minutes", 0)),
         *[1.0 if b else 0.0 for b in bools],
     ]
 

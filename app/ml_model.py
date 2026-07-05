@@ -101,13 +101,74 @@ class LeadMLModel:
         score_mae = float(np.mean(np.abs(pred_score - y_score_val)))
         tier_acc = float(np.mean(pred_tier == y_tier_val))
 
+        from sklearn.metrics import confusion_matrix, r2_score
+
+        score_r2 = float(r2_score(y_score_val, pred_score))
+        cm = confusion_matrix(y_tier_val, pred_tier, labels=list(range(4)))
+        tier_names = list(TIER_INDEX.keys())
+
+        tier_precision: dict[str, float] = {}
+        tier_recall: dict[str, float] = {}
+        for idx, name in enumerate(tier_names):
+            tp = cm[idx, idx]
+            col_sum = cm[:, idx].sum()
+            row_sum = cm[idx, :].sum()
+            tier_precision[name] = round(float(tp / col_sum) if col_sum else 0, 3)
+            tier_recall[name] = round(float(tp / row_sum) if row_sum else 0, 3)
+
         metrics = {
             "validation_score_mae": round(score_mae, 2),
+            "validation_score_r2": round(score_r2, 3),
             "validation_tier_accuracy": round(tier_acc, 3),
             "train_rows": int(len(x_train)),
+            "validation_rows": int(len(x_val)),
+            "validation_split": "80/20 stratified by tier",
+            "tier_precision": tier_precision,
+            "tier_recall": tier_recall,
+            "confusion_matrix": {
+                "labels": tier_names,
+                "matrix": cm.tolist(),
+            },
         }
         self.save(metrics)
         return metrics
+
+    def model_card(self) -> dict[str, Any]:
+        """Transparency artifact for judges — metrics, features, guardrails."""
+        importances: list[dict[str, Any]] = []
+        if self.regressor is not None:
+            imp = self.regressor.feature_importances_
+            pairs = sorted(
+                zip(FEATURE_NAMES, imp, strict=True),
+                key=lambda p: p[1],
+                reverse=True,
+            )
+            importances = [
+                {"feature": n, "label": FEATURE_LABELS.get(n, n), "importance": round(float(v), 4)}
+                for n, v in pairs[:10]
+            ]
+        metrics = self.meta.get("metrics", {})
+        return {
+            "model_type": "XGBoost hybrid (regressor + tier classifier)",
+            "feature_count": len(FEATURE_NAMES),
+            "validation_mae": metrics.get("validation_score_mae"),
+            "validation_r2": metrics.get("validation_score_r2"),
+            "validation_tier_accuracy": metrics.get("validation_tier_accuracy"),
+            "train_rows": metrics.get("train_rows"),
+            "validation_rows": metrics.get("validation_rows"),
+            "validation_split": metrics.get("validation_split"),
+            "tier_precision": metrics.get("tier_precision", {}),
+            "tier_recall": metrics.get("tier_recall", {}),
+            "confusion_matrix": metrics.get("confusion_matrix", {}),
+            "top_features": importances,
+            "guardrails": {
+                "max_nudge_points": MAX_ML_NUDGE,
+                "min_confidence": MIN_ML_CONFIDENCE,
+                "quality_lead_protection": "ML never demotes Quality Leads",
+                "rules_primary": "Rules lead; ML nudges only when confident",
+            },
+            "version": self.meta.get("version", "1.0"),
+        }
 
     def predict(self, customer: dict) -> dict[str, Any]:
         if not self.is_ready:
@@ -137,6 +198,10 @@ class LeadMLModel:
             "ml_tier_probability": round(ml_tier_prob, 3),
             "ml_confidence": round(max(ml_confidence, 0.0), 3),
             "ml_reasons": ml_reasons,
+            "feature_contributions": [
+                {"feature": FEATURE_NAMES[i], "label": FEATURE_LABELS.get(FEATURE_NAMES[i], FEATURE_NAMES[i]), "contribution": round(float(feat_contribs[i]), 4)}
+                for i in range(len(FEATURE_NAMES))
+            ],
             "model_metrics": self.meta.get("metrics", {}),
         }
 
