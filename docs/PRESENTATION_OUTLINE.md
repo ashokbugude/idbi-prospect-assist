@@ -83,7 +83,7 @@ Post-shortlist: IDBI AWS sandbox APIs (API Gateway → ECS → RDS/S3).
 
 1. Login → Dashboard — tier distribution + **Before/After** toggle
 2. Quality Lead — **GenAI brief** → income inference → **txn timeline**
-3. Multi-bank — **AA consent** → holistic income uplift
+3. Multi-bank — **AA consent** on `IDBI-L10055` → fetch confirms holistic income → tier uplift (or EMI capacity if tier unchanged)
 4. Impact page — pilot validation plan
 5. Export CSV + **Underwriter PDF**
 6. `/architecture` — AWS + compliance

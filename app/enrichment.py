@@ -93,6 +93,14 @@ def score_geo_stability(customer: dict) -> dict:
     }
 
 
+def idbi_only_baseline(customer: dict) -> dict:
+    """Pre-AA view: IDBI-only income (no cross-bank holistic uplift)."""
+    c = dict(customer)
+    c["has_other_bank_accounts"] = False
+    c["multi_bank_income_share"] = 0
+    return c
+
+
 def enrich_customer(customer: dict) -> dict:
     """Return enriched copy used by scoring engine."""
     c = dict(customer)

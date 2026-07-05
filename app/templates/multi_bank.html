@@ -12,14 +12,14 @@
 
 <section class="arch-section aa-section">
   <h2>Account Aggregator (AA) Flow</h2>
-  <p class="section-note">Simulate RBI AA consent → fetch other-bank statements → auto-rescore (no manual inflow entry).</p>
+  <p class="section-note">Simulate RBI AA consent → fetch other-bank statements → rescore from IDBI-only baseline to AA-confirmed holistic income. Demo hero: <strong>IDBI-L10055</strong>.</p>
   <form class="filters" id="aa-form">
     <label>
       Customer ID
       <select name="customer_id" required>
         {% for c in all_customers %}
         {% if c.has_other_bank_accounts %}
-        <option value="{{ c.customer_id }}">{{ c.customer_id }} — {{ c.name }}</option>
+        <option value="{{ c.customer_id }}" {% if c.customer_id == hero_aa_customer %}selected{% endif %}>{{ c.customer_id }} — {{ c.name }}</option>
         {% endif %}
         {% endfor %}
       </select>
@@ -67,11 +67,15 @@
     return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
-  function renderTierChange(p) {
+  function renderTierChange(p, data = {}) {
     if (!p.previous_tier) return '';
     const changed = p.tier_changed || p.previous_tier !== p.lead_tier;
     if (!changed) {
-      return `<p class="section-note">Lead tier unchanged after holistic income update: <strong>${p.lead_tier}</strong></p>`;
+      const emiUplift = data.multibank_analysis?.emi_uplift_pct;
+      const upliftNote = emiUplift
+        ? ` Holistic EMI capacity +${emiUplift}% vs IDBI-only view.`
+        : '';
+      return `<p class="section-note">Lead tier unchanged after AA fetch: <strong>${p.lead_tier}</strong>.${upliftNote} Holistic income and affordable EMI confirm repayment capacity.</p>`;
     }
     return `
       <p class="insight-banner target-met-banner tier-change-banner">
@@ -90,7 +94,7 @@
 
     return `
       <h3>Analysis Results — ${data.customer_id}</h3>
-      ${renderTierChange(p)}
+      ${renderTierChange(p, data)}
 
       <section class="arch-section multibank-result-section">
         <h4>Income Comparison</h4>

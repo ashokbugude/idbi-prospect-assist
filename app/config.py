@@ -26,7 +26,7 @@ AUTH_EXEMPT_PREFIXES = (
 HERO_CUSTOMERS = {
     "quality_lead": "IDBI-L10010",
     "window_shopper": "IDBI-L10121",
-    "multibank_uplift": "IDBI-L10033",
+    "multibank_uplift": "IDBI-L10055",
 }
 
 # Self-employed net margin by business type (AMA: industry margin assumptions)

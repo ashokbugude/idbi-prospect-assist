@@ -9,8 +9,8 @@
 - [ ] Verify public URL loads dashboard (login PIN: `idbi2026`)
 - [ ] Verify `/api/health` returns `version: 0.7.0` and `ml_ready: true`
 - [ ] Test RM CSV export: `/api/rm-queue/export`
-- [ ] Test sandbox stub: `/api/sandbox/IDBI-L10001`
-- [ ] Test AA flow on `/multi-bank`
+- [ ] Test sandbox stub: `/api/sandbox/IDBI-L10010`
+- [ ] Test AA flow on `/multi-bank` (hero: `IDBI-L10055` — tier uplift after consent)
 - [ ] Test PDF export from customer detail page
 
 ## Hack2skill platform (manual)
@@ -49,7 +49,7 @@ Login at `http://localhost:8080/login` with PIN `idbi2026`.
 ```
 Demo URL: https://YOUR-APP.onrender.com
 Login PIN: idbi2026
-Public APIs (no login): /api/health · /api/impact · /api/sandbox/IDBI-L10001
+Public APIs (no login): /api/health · /api/impact · /api/sandbox/IDBI-L10010
 ```
 
 ## 2-minute demo script (rehearse)
@@ -57,7 +57,7 @@ Public APIs (no login): /api/health · /api/impact · /api/sandbox/IDBI-L10001
 1. **Problem (15s):** ~1% conversion; RMs chase window shoppers
 2. **Dashboard (20s):** Tier distribution, Before/After toggle, RM queue ~23%
 3. **Quality Lead detail (45s):** GenAI brief → income inference → txn timeline → need/want/luxury → PDF
-4. **Multi-bank (20s):** AA consent flow → holistic income uplift
+4. **Multi-bank (20s):** AA consent on `IDBI-L10055` → fetch → tier moves Interested → Serious; highlight holistic income + affordable EMI
 5. **Impact (20s):** Baseline 1% → RM queue 25% → quality 41% (simulation + pilot plan)
 6. **Architecture (15s):** AWS diagram + compliance + sandbox stub
 7. **Ask (10s):** Ready for IDBI sandbox pilot with RM teams

@@ -6,6 +6,7 @@ import hashlib
 import time
 from typing import Any
 
+from app.enrichment import idbi_only_baseline
 from app.multibank import analyze_multibank
 from app.scoring import TIER_CSS, score_customer
 
@@ -43,13 +44,14 @@ def fetch_aa_statements(customer: dict, consent_id: str) -> dict:
     share = float(customer.get("multi_bank_income_share", 0.2))
     other_inflow = int(stated * share / max(1 - share, 0.1) * rng.uniform(0.9, 1.15))
 
-    profile_before = score_customer(customer)
+    profile_before = score_customer(idbi_only_baseline(customer))
     analysis = analyze_multibank(customer, other_bank_monthly_inflow=other_inflow)
     enriched = dict(customer)
     enriched["has_other_bank_accounts"] = True
     enriched["multi_bank_income_share"] = round(
         other_inflow / max(analysis["holistic_monthly_income"], 1), 2
     )
+    enriched["holistic_monthly_income"] = analysis["holistic_monthly_income"]
     profile = score_customer(enriched)
 
     return {

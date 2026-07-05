@@ -171,7 +171,9 @@ def _multibank_table_context(page: int) -> dict:
 
 
 def _rescored_profile(raw: dict, enriched: dict) -> dict:
-    before = score_customer(raw)
+    from app.enrichment import idbi_only_baseline
+
+    before = score_customer(idbi_only_baseline(raw))
     after = score_customer(enriched)
     return {
         "lead_tier": after["lead_tier"],
@@ -368,6 +370,7 @@ async def multi_bank_page(request: Request, page: int = 1):
         {
             "request": request,
             "all_customers": load_customers(),
+            "hero_aa_customer": HERO_CUSTOMERS["multibank_uplift"],
             "active": "multi-bank",
             **_multibank_table_context(page),
         },

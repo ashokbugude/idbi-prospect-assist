@@ -171,12 +171,21 @@ def test_transaction_timeline(quality_customer):
 
 def test_aa_flow(quality_customer):
     from app.account_aggregator import fetch_aa_statements, initiate_aa_consent
+    from app.data_generator import generate_dataset
 
     quality_customer["has_other_bank_accounts"] = True
     consent = initiate_aa_consent(quality_customer["customer_id"])
     result = fetch_aa_statements(quality_customer, consent["consent_id"])
     assert result["status"] == "success"
     assert result["multibank_analysis"]["holistic_monthly_income"] > 0
+
+    hero = next(c for c in generate_dataset(200, seed=42) if c["customer_id"] == "IDBI-L10055")
+    consent = initiate_aa_consent(hero["customer_id"])
+    uplift = fetch_aa_statements(hero, consent["consent_id"])
+    profile = uplift["rescored_profile"]
+    assert profile["tier_changed"] is True
+    assert profile["previous_tier"] == "Interested"
+    assert profile["lead_tier"] == "Serious"
 
 
 def test_underwriter_pdf(quality_customer):

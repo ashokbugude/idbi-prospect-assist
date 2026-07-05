@@ -39,7 +39,7 @@ Addresses IDBI's stated pain: **~1% lead conversion** with too many window-shopp
 | **Public API** | `/api/health` · `/api/impact` · `/api/sandbox/IDBI-L10010` |
 | **Hero Quality Lead** | `/customer/IDBI-L10010` (Vikram Singh) |
 | **Hero window shopper** | `/customer/IDBI-L10121` (Rahul Sharma) |
-| **Hero multi-bank** | `/customer/IDBI-L10033` (Vikram Menon) |
+| **Hero multi-bank (AA demo)** | `/multi-bank` → `IDBI-L10055` (Aarav Singh) — Interested → Serious after AA fetch |
 
 See `docs/AMA_ALIGNMENT.md` for full Track 02 traceability.
 
