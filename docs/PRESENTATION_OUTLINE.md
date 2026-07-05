@@ -88,7 +88,7 @@ Post-shortlist: IDBI AWS sandbox APIs (API Gateway → ECS → RDS/S3).
 5. Export CSV + **Underwriter PDF**
 6. `/architecture` — AWS + compliance
 
-**Live URL:** _(paste Render deployment URL)_  
+**Live URL:** https://idbi-prospect-assist-474562381457.asia-south1.run.app  
 **Login PIN:** `idbi2026` (RM demo gate)  
 **Public APIs (no login):** `/api/health`, `/api/impact`, `/api/sandbox/IDBI-L10010`  
 **GitHub:** `github.com/ashokbugude/idbi-prospect-assist`

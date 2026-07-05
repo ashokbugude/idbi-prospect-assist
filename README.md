@@ -35,6 +35,7 @@ Addresses IDBI's stated pain: **~1% lead conversion** with too many window-shopp
 
 | Item | Value |
 |------|--------|
+| **Live demo** | https://idbi-prospect-assist-474562381457.asia-south1.run.app |
 | **Login** | `/login` → PIN `idbi2026` |
 | **Public API** | `/api/health` · `/api/impact` · `/api/sandbox/IDBI-L10010` |
 | **Hero Quality Lead** | `/customer/IDBI-L10010` (Vikram Singh) |

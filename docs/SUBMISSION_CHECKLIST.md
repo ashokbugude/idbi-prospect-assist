@@ -5,7 +5,8 @@
 ## Code & deployment
 
 - [ ] Push repo to GitHub: `https://github.com/ashokbugude/idbi-prospect-assist`
-- [ ] Deploy to Render using `render.yaml` / `Dockerfile`
+- [x] Deploy live demo (Google Cloud Run — `gcloud run deploy`)
+- [ ] Optional: mirror on Render using `render.yaml` / `Dockerfile`
 - [ ] Verify public URL loads dashboard (login PIN: `idbi2026`)
 - [ ] Verify `/api/health` returns `version: 0.7.0` and `ml_ready: true`
 - [ ] Test RM CSV export: `/api/rm-queue/export`
@@ -37,7 +38,21 @@ Login at `http://localhost:8080/login` with PIN `idbi2026`.
 
 **Judge / API access:** Read-only APIs (`/api/health`, `/api/impact`, `/api/sandbox/{id}`, `/api/demo-comparison`, `/api/ml/model-card`) work without login. UI pages and CSV export require RM PIN.
 
-## Render deploy steps
+## Live deployment
+
+**URL:** https://idbi-prospect-assist-474562381457.asia-south1.run.app  
+**Login PIN:** `idbi2026`  
+**Region:** Google Cloud Run (`asia-south1`)
+
+Redeploy after code changes:
+
+```powershell
+gcloud run deploy idbi-prospect-assist --source . --region asia-south1 --allow-unauthenticated --set-env-vars "RM_DEMO_PIN=idbi2026,PYTHONUNBUFFERED=1"
+```
+
+Optional Render mirror: connect repo at [render.com](https://render.com) → New → Blueprint → `ashokbugude/idbi-prospect-assist`.
+
+## Render deploy steps (optional)
 
 1. Create repo on GitHub and push `main`
 2. [render.com](https://render.com) → New → Blueprint → connect repo
@@ -47,7 +62,7 @@ Login at `http://localhost:8080/login` with PIN `idbi2026`.
 
 **Paste into Hack2skill notes + PPT Slide 8:**
 ```
-Demo URL: https://YOUR-APP.onrender.com
+Demo URL: https://idbi-prospect-assist-474562381457.asia-south1.run.app
 Login PIN: idbi2026
 Public APIs (no login): /api/health · /api/impact · /api/sandbox/IDBI-L10010
 ```
