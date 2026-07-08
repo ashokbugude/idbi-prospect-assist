@@ -46,6 +46,23 @@
       <span class="idbi-tagline">Looking beyond the obvious</span>
     </div>
   </footer>
+  <script>
+  (function () {
+    const header = document.querySelector('.idbi-header');
+    if (!header) return;
+    const syncHeaderOffset = () => {
+      document.documentElement.style.setProperty(
+        '--idbi-header-offset',
+        header.offsetHeight + 'px'
+      );
+    };
+    syncHeaderOffset();
+    window.addEventListener('resize', syncHeaderOffset);
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(syncHeaderOffset).observe(header);
+    }
+  })();
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

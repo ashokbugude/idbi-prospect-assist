@@ -34,6 +34,10 @@
 
 * { box-sizing: border-box; }
 
+html {
+  scroll-padding-top: var(--idbi-header-offset, 88px);
+}
+
 body {
   margin: 0;
   font-family: "Open Sans", "Segoe UI", system-ui, sans-serif;
@@ -633,11 +637,16 @@ footer:not(.idbi-footer) a {
 }
 
 .rm-queue-section { margin-bottom: 20px; }
+.rm-queue-section.demo-before-mode .rm-queue-grid { opacity: 0.55; }
 
 .section-note {
   color: var(--muted);
   font-size: 14px;
   margin: -8px 0 12px;
+}
+
+.reasons + .section-note {
+  margin-top: 12px;
 }
 
 .rm-queue-grid {
@@ -893,7 +902,7 @@ footer:not(.idbi-footer) a {
 
 .table-toolbar-sticky {
   position: sticky;
-  top: 63px;
+  top: var(--idbi-header-offset, 88px);
   z-index: 20;
   background: var(--bg);
   padding: 8px 0 10px;
@@ -998,7 +1007,19 @@ code {
 .stats-3 { grid-template-columns: repeat(3, 1fr); }
 
 .hero-links { display: flex; flex-wrap: wrap; gap: 10px; }
-.hero-links .rm-card { flex: 1; min-width: 200px; text-align: center; }
+.hero-links .rm-card {
+  flex: 1;
+  min-width: 200px;
+  text-align: center;
+  scroll-margin-top: var(--idbi-header-offset, 88px);
+}
+
+.rm-queue-grid .rm-card,
+.back-link,
+.page-link-ajax,
+.page-btn {
+  scroll-margin-top: var(--idbi-header-offset, 88px);
+}
 
 .tier-why summary { cursor: pointer; list-style: none; }
 .tier-why summary h2 { display: inline; margin: 0; }

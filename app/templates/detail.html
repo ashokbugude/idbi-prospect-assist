@@ -45,9 +45,14 @@
 
     {% if rm_brief %}
     <section class="genai-section">
-      <h2>RM Call Brief <span class="badge">GenAI-ready</span></h2>
+      <h2>
+        {% if customer.lead_tier == 'Window-shop Risk' %}Deprioritization Brief
+        {% elif customer.lead_tier == 'Interested' %}RM Nurture Brief
+        {% else %}RM Call Brief{% endif %}
+        <span class="badge">GenAI-ready</span>
+      </h2>
       <div class="genai-brief">{{ rm_brief.brief_html | safe }}</div>
-      <p class="section-note">{{ rm_brief.disclaimer }} {{ rm_brief.source_label }}</p>
+      <p class="section-note">{{ rm_brief.disclaimer }} · {{ rm_brief.source_label }}</p>
     </section>
     {% endif %}
 

@@ -36,11 +36,13 @@
 </section>
 
 <p class="insight-banner" id="conversion-banner">
-  {{ stats.conversion_story }}
-  {% if stats.meets_track02_target %}
-  <span class="target-met">✓ Track 02 target met</span>
-  {% endif %}
-  · RM time saved: ~{{ stats.rm_time_saved_pct }}%
+  <span id="conversion-banner-text">
+    {{ stats.conversion_story }}
+    {% if stats.meets_track02_target %}
+    <span class="target-met" id="conversion-target-met">✓ Track 02 target met</span>
+    {% endif %}
+    · RM time saved: ~{{ stats.rm_time_saved_pct }}%
+  </span>
 </p>
 
 <section class="arch-section digital-section">
@@ -99,9 +101,9 @@
   </div>
 </section>
 
-<section class="rm-queue-section">
-  <h2>Today's RM Priority Queue</h2>
-  <p class="section-note">Quality + Serious leads only — {{ stats.rm_queue }} customers ready for outreach</p>
+<section class="rm-queue-section" id="rm-queue-section">
+  <h2 id="rm-queue-heading">Today's RM Priority Queue</h2>
+  <p class="section-note" id="rm-queue-note">Quality + Serious leads only — {{ stats.rm_queue }} customers ready for outreach</p>
   <div class="rm-queue-grid">
     {% for c in rm_queue %}
     <a class="rm-card" href="/customer/{{ c.customer_id }}">
@@ -188,6 +190,10 @@
 (function () {
   fetch('/api/demo-comparison').then((r) => r.json()).then((data) => {
     const btns = document.querySelectorAll('.demo-btn');
+    const heading = document.getElementById('rm-queue-heading');
+    const note = document.getElementById('rm-queue-note');
+    const bannerText = document.getElementById('conversion-banner-text');
+    const afterBannerHtml = bannerText ? bannerText.innerHTML : '';
     const setMode = (mode) => {
       btns.forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
       const d = mode === 'before' ? data.before : data.after;
@@ -197,6 +203,26 @@
       document.getElementById('demo-rm-pct').textContent = (d.rm_calls_pct || 100) + '%';
       document.getElementById('demo-time-saved').textContent =
         (mode === 'before' ? '0' : data.after.rm_time_saved_pct) + '%';
+      if (heading && note) {
+        if (mode === 'before') {
+          heading.textContent = 'Before — All Leads Contacted';
+          note.textContent =
+            `Spray-and-pray outreach — all ${d.leads_contacted} leads in pipeline (~${d.conversion_pct}% blended conversion)`;
+        } else {
+          heading.textContent = "Today's RM Priority Queue";
+          note.textContent =
+            `Quality + Serious leads only — ${d.leads_contacted} customers ready for outreach`;
+        }
+      }
+      if (bannerText) {
+        if (mode === 'before') {
+          bannerText.textContent =
+            `Spray-and-pray baseline ~${data.before.conversion_pct}% conversion on all ${data.before.leads_contacted} leads · RM time saved: ~0%`;
+        } else {
+          bannerText.innerHTML = afterBannerHtml;
+        }
+      }
+      document.getElementById('rm-queue-section')?.classList.toggle('demo-before-mode', mode === 'before');
     };
     btns.forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
     setMode('after');

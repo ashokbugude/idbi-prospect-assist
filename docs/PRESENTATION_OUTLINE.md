@@ -1,6 +1,9 @@
-# Prospect Assist AI — Presentation Outline (Hack2skill PPT)
+# Prospect Assist AI — Hack2skill PPT
 
-Copy each slide into the official Hack2skill template and export as PDF.
+**Filled deck (official template):** `docs/IDBI_Prospect_Assist_Submission.pptx`  
+Regenerate: `python scripts/update_submission_ppt.py`
+
+Copy each slide below was used as content source; the filled `.pptx` follows the Hack2skill slide structure (15 slides).
 
 ---
 

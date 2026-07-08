@@ -159,6 +159,29 @@ def test_rm_brief_generated(quality_customer):
     assert "<strong>" in brief["brief_html"]
     assert "source_label" in brief
     assert brief["source"] in ("srishti_genai_template", "openai")
+    assert brief["source_label"] in ("Template brief", "Live LLM brief")
+    assert "Why call" in brief["brief"]
+
+
+def test_rm_brief_window_shopper_deprioritized():
+    from app.rm_brief import generate_rm_brief
+
+    profile = {
+        "name": "Rahul Sharma",
+        "lead_tier": "Window-shop Risk",
+        "top_product_label": "Personal Loan",
+        "composite_lead_score": 28,
+        "recommended_action": "Deprioritize — send financial literacy content, no RM call",
+        "repayment_capacity": {"score": 42},
+        "purchase_intent": {"score": 18, "details": {"window_shopping_flag": True}},
+        "behavioral_discipline": {"score": 35},
+        "delinquency_risk": {"risk_band": "Low"},
+        "bureau_analysis": {"normalized_score": 55},
+    }
+    brief = generate_rm_brief(profile)
+    assert "Why deprioritize" in brief["brief"]
+    assert "Why call" not in brief["brief"]
+    assert "Do not place an RM sales call" in brief["brief"]
 
 
 def test_transaction_timeline(quality_customer):

@@ -50,11 +50,30 @@ def _template_brief(profile: dict) -> str:
 
     avoid_text = f" Avoid: {'; '.join(avoid)}." if avoid else ""
 
+    if tier == "Window-shop Risk":
+        return (
+            f"**Why deprioritize {name}:** {tier} (score {composite}) — browsing-heavy pattern with weak "
+            f"{product} commitment. Repayment {repayment}/100, intent {intent}/100, "
+            f"discipline {discipline}/100.{income_note} "
+            f"**Do not place an RM sales call.** **RM action:** {action}.{avoid_text}"
+        )
+
+    if tier == "Interested":
+        opener = f"**Why nurture {name}:**"
+        pitch = (
+            f"**Nurture:** Share {product} EMI calculator and light-touch digital follow-up — "
+            f"confirm funding timeline before RM escalation."
+        )
+    else:
+        opener = f"**Why call {name}:**"
+        pitch = (
+            f"**Pitch:** Lead with {product}, reference their IDBI relationship and affordable EMI capacity."
+        )
+
     return (
-        f"**Why call {name}:** {tier} (score {composite}) with strong {product} fit — "
+        f"{opener} {tier} (score {composite}) with strong {product} fit — "
         f"repayment {repayment}/100, intent {intent}/100, discipline {discipline}/100.{income_note} "
-        f"**Pitch:** Lead with {product}, reference their IDBI relationship and affordable EMI capacity. "
-        f"**RM action:** {action}.{avoid_text}"
+        f"{pitch} **RM action:** {action}.{avoid_text}"
     )
 
 
@@ -66,10 +85,26 @@ def _llm_brief(profile: dict) -> str | None:
         from openai import OpenAI
 
         client = OpenAI(api_key=api_key)
+        tier = profile.get("lead_tier", "Interested")
+        if tier == "Window-shop Risk":
+            brief_goal = (
+                "Write a 3-sentence deprioritization brief for an IDBI loan officer. "
+                "Explain why NOT to call, what automated nurture to use instead, and what to avoid. "
+                "Do not recommend an RM sales call."
+            )
+        elif tier == "Interested":
+            brief_goal = (
+                "Write a 3-sentence nurture brief for an IDBI loan officer. "
+                "Cover: why nurture digitally, what to share, when to escalate to a call."
+            )
+        else:
+            brief_goal = (
+                "Write a 3-sentence RM call brief for an IDBI loan officer. "
+                "Cover: why call, what to pitch, what to avoid."
+            )
         prompt = (
-            "Write a 3-sentence RM call brief for an IDBI loan officer. "
-            "Cover: why call, what to pitch, what to avoid. Professional tone.\n"
-            f"Profile JSON keys: name={profile.get('name')}, tier={profile.get('lead_tier')}, "
+            f"{brief_goal} Professional tone.\n"
+            f"Profile JSON keys: name={profile.get('name')}, tier={tier}, "
             f"product={profile.get('top_product_label')}, composite={profile.get('composite_lead_score')}, "
             f"action={profile.get('recommended_action')}"
         )
@@ -93,9 +128,5 @@ def generate_rm_brief(profile: dict) -> dict:
         "brief_html": _bold_to_html(brief),
         "source": "openai" if llm_text else "srishti_genai_template",
         "disclaimer": "AI-assisted brief — RM makes final outreach decision (human-in-loop).",
-        "source_label": (
-            "Live LLM (OpenAI)"
-            if llm_text
-            else "GenAI-ready template — set OPENAI_API_KEY on Render for live LLM briefs"
-        ),
+        "source_label": "Live LLM brief" if llm_text else "Template brief",
     }
