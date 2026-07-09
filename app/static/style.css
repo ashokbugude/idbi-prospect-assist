@@ -55,7 +55,7 @@ body {
   box-shadow: var(--shadow-md);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 2100;
 }
 
 .idbi-header-inner {
@@ -133,6 +133,63 @@ body {
 .page-main {
   flex: 1;
   padding: 24px 0 32px;
+}
+
+html.nav-loading .page-main,
+body.is-navigating .page-main {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.page-loader {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: var(--idbi-header-offset, 88px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  background: rgba(242, 246, 245, 0.82);
+  backdrop-filter: blur(2px);
+}
+
+html.nav-loading .page-loader,
+body.is-navigating .page-loader {
+  display: flex;
+}
+
+.page-loader-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 28px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.page-loader-card p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--idbi-green-dark);
+}
+
+.page-loader-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--idbi-green-muted);
+  border-top-color: var(--idbi-green);
+  border-radius: 50%;
+  animation: page-loader-spin 0.75s linear infinite;
+}
+
+@keyframes page-loader-spin {
+  to { transform: rotate(360deg); }
 }
 
 .container {
