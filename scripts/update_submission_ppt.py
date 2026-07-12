@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
@@ -16,7 +17,10 @@ TEMPLATE = ROOT / "input" / "Prototype Submission Deck _ IDBI Innovate.pptx"
 OUTPUT_INPUT = ROOT / "input" / "IDBI_Prospect_Assist_Submission_FILLED.pptx"
 OUTPUT_DOCS = ROOT / "docs" / "IDBI_Prospect_Assist_Submission.pptx"
 
-DEMO_URL = "https://idbi-prospect-assist-474562381457.asia-south1.run.app"
+DEMO_URL = os.environ.get(
+    "PUBLIC_DEMO_URL",
+    "https://idbi-prospect-assist.onrender.com",
+)
 GITHUB_URL = "https://github.com/ashokbugude/idbi-prospect-assist"
 
 # Content area below slide titles (EMU from template inspection)
@@ -100,7 +104,7 @@ def main() -> int:
             "• Behavioral discipline (need vs want vs luxury, day-1 salary spend)",
             "",
             "Output: RM-prioritized queue, explainable tiers, GenAI call briefs, underwriter PDF.",
-            "Production POC v0.7.0 — live demo deployed on Google Cloud Run.",
+            "Production POC v0.7.0 — live demo on Render (free tier).",
         ],
     )
 
@@ -189,7 +193,7 @@ def main() -> int:
         [
             "Current POC (Round 1):",
             "  FastAPI + Jinja2 UI -> scoring engine -> XGBoost -> JSON data store",
-            "  Deployed: Google Cloud Run (Docker, asia-south1)",
+            "  Deployed: Render (Docker, free tier)",
             "",
             "Target production (post-shortlist):",
             "  API Gateway -> ECS/Fargate (scoring service)",
@@ -210,7 +214,7 @@ def main() -> int:
             "PDF: fpdf2 underwriter packet export",
             "Data: synthetic IDBI liability customers (seed=42, n=200)",
             "Auth: RM PIN session cookie (RM_DEMO_PIN env)",
-            "Deploy: Docker, Google Cloud Run; render.yaml for optional Render mirror",
+            "Deploy: Docker, Render (free tier primary); render.yaml included",
             "Testing: pytest (26 tests), validate.py, benchmark.py",
             "Optional: OpenAI API for live GenAI RM briefs",
         ],
@@ -222,7 +226,7 @@ def main() -> int:
         slides[8],
         [
             "POC / hackathon phase:",
-            "• Cloud Run free tier + GCP trial credits — demo hosting ~$0",
+            "• Render free tier — demo hosting $0 (750 hrs/month)",
             "• No paid third-party APIs required (GenAI template fallback)",
             "",
             "Pilot estimate (4-week RM A/B, post-shortlist):",

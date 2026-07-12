@@ -7,7 +7,12 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: DEPLOY_PLATFORM
+        value: render
       - key: RM_DEMO_PIN
-        value: "idbi2026"
+        value: idbi2026
       - key: DISABLE_RM_AUTH
         value: "0"
+      # Set after first deploy — replace with your actual onrender.com URL
+      - key: PUBLIC_DEMO_URL
+        value: https://idbi-prospect-assist.onrender.com

@@ -35,7 +35,7 @@ Addresses IDBI's stated pain: **~1% lead conversion** with too many window-shopp
 
 | Item | Value |
 |------|--------|
-| **Live demo** | https://idbi-prospect-assist-474562381457.asia-south1.run.app |
+| **Live demo** | https://idbi-prospect-assist.onrender.com *(Render free tier)* |
 | **Login** | `/login` → PIN `idbi2026` |
 | **Public API** | `/api/health` · `/api/impact` · `/api/sandbox/IDBI-L10010` |
 | **Hero Quality Lead** | `/customer/IDBI-L10010` (Vikram Singh) |
@@ -90,6 +90,18 @@ python scripts/benchmark.py
 | `GET /api/customer/{id}/rm-brief` | GenAI RM call brief |
 | `GET /api/customer/{id}/underwriter-pdf` | Underwriter packet PDF |
 | `GET /api/demo-comparison` | Before/After conversion comparison |
+
+## Deploy (Render — free)
+
+See **`docs/RENDER_DEPLOY.md`** for step-by-step setup.
+
+```powershell
+# After deploy, set your URL and regenerate submission deck
+$env:PUBLIC_DEMO_URL="https://idbi-prospect-assist.onrender.com"
+python scripts/update_submission_ppt.py
+```
+
+> Hugging Face Docker Spaces are **paid** — use Render instead. See `docs/HUGGINGFACE_DEPLOY.md`.
 
 ## Hackathon submission (Jul 9)
 

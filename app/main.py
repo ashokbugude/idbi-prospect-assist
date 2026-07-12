@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.auth import auth_token, is_authenticated, require_auth, verify_pin
-from app.config import APP_TITLE, APP_VERSION, AUTH_COOKIE, HERO_CUSTOMERS
+from app.config import APP_TITLE, APP_VERSION, AUTH_COOKIE, DEPLOY_PLATFORM, HERO_CUSTOMERS, PUBLIC_DEMO_URL
 from app.scoring import (
     LEAD_TIERS,
     PRODUCT_LABELS,
@@ -35,6 +35,8 @@ app = FastAPI(
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+templates.env.globals["deploy_platform"] = DEPLOY_PLATFORM
+templates.env.globals["public_demo_url"] = PUBLIC_DEMO_URL
 
 
 @app.middleware("http")
@@ -700,4 +702,6 @@ async def health():
         "track": "02-prospect-assist-ai",
         "version": APP_VERSION,
         "ml_ready": get_model().is_ready,
+        "deploy_platform": DEPLOY_PLATFORM,
+        "demo_url": PUBLIC_DEMO_URL,
     }

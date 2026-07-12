@@ -7,6 +7,13 @@ import os
 APP_VERSION = "0.7.0"
 APP_TITLE = "IDBI Prospect Assist AI"
 
+# Public demo URL (override after deploy — Render free tier default)
+DEPLOY_PLATFORM = os.environ.get("DEPLOY_PLATFORM", "render")
+PUBLIC_DEMO_URL = os.environ.get(
+    "PUBLIC_DEMO_URL",
+    "https://idbi-prospect-assist.onrender.com",
+)
+
 # Demo RM login PIN (override via RM_DEMO_PIN env in production)
 RM_DEMO_PIN = os.environ.get("RM_DEMO_PIN", "idbi2026")
 AUTH_COOKIE = "prospect_rm_session"

@@ -5,8 +5,7 @@
 ## Code & deployment
 
 - [ ] Push repo to GitHub: `https://github.com/ashokbugude/idbi-prospect-assist`
-- [x] Deploy live demo (Google Cloud Run — `gcloud run deploy`)
-- [ ] Optional: mirror on Render using `render.yaml` / `Dockerfile`
+- [ ] Deploy live demo on **Render (free)** — see `docs/RENDER_DEPLOY.md`
 - [ ] Verify public URL loads dashboard (login PIN: `idbi2026`)
 - [ ] Verify `/api/health` returns `version: 0.7.0` and `ml_ready: true`
 - [ ] Test RM CSV export: `/api/rm-queue/export`
@@ -38,34 +37,37 @@ Login at `http://localhost:8080/login` with PIN `idbi2026`.
 
 **Judge / API access:** Read-only APIs (`/api/health`, `/api/impact`, `/api/sandbox/{id}`, `/api/demo-comparison`, `/api/ml/model-card`) work without login. UI pages and CSV export require RM PIN.
 
-## Live deployment
+## Live deployment (Render — free)
 
-**URL:** https://idbi-prospect-assist-474562381457.asia-south1.run.app  
+**URL:** https://idbi-prospect-assist.onrender.com  
 **Login PIN:** `idbi2026`  
-**Region:** Google Cloud Run (`asia-south1`)
+**Platform:** Render free tier (Docker)
 
-Redeploy after code changes:
+### Deploy steps
 
-```powershell
-gcloud run deploy idbi-prospect-assist --source . --region asia-south1 --allow-unauthenticated --set-env-vars "RM_DEMO_PIN=idbi2026,PYTHONUNBUFFERED=1"
+1. Push repo to GitHub
+2. [render.com](https://render.com) → **New +** → **Blueprint** → connect `ashokbugude/idbi-prospect-assist`
+3. Apply — first build ~8–15 min (ML trains on build)
+4. Set `PUBLIC_DEMO_URL` in Render env to your `*.onrender.com` URL
+
+Full guide: `docs/RENDER_DEPLOY.md`
+
+> HF Docker Spaces are **paid** — not needed for this POC.
+
+**Paste into Hack2skill notes + PPT Slide 8:**
+```
+Demo URL: https://idbi-prospect-assist.onrender.com
+Login PIN: idbi2026
+Public APIs (no login): /api/health · /api/impact · /api/sandbox/IDBI-L10010
 ```
 
-Optional Render mirror: connect repo at [render.com](https://render.com) → New → Blueprint → `ashokbugude/idbi-prospect-assist`.
-
-## Render deploy steps (optional)
+## Render deploy steps (reference)
 
 1. Create repo on GitHub and push `main`
 2. [render.com](https://render.com) → New → Blueprint → connect repo
 3. Render reads `render.yaml` and builds Docker image (trains ML on build)
 4. Set `RM_DEMO_PIN` in Render env if changing default
 5. Copy the `*.onrender.com` URL for Hack2skill submission (Slide 8)
-
-**Paste into Hack2skill notes + PPT Slide 8:**
-```
-Demo URL: https://idbi-prospect-assist-474562381457.asia-south1.run.app
-Login PIN: idbi2026
-Public APIs (no login): /api/health · /api/impact · /api/sandbox/IDBI-L10010
-```
 
 ## 2-minute demo script (rehearse)
 

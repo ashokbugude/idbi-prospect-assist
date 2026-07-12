@@ -156,9 +156,8 @@
 <section class="arch-section">
   <h2>Deployment</h2>
   <p class="section-note">
-    ML model: {% if ml_ready %}trained and loaded{% else %}not trained — run scripts/train_model.py{% endif %}.
-    Live POC on Google Cloud Run (asia-south1). Docker image trains on build.
-    Optional Render blueprint in <code>render.yaml</code>.
+    Live POC on Render (free tier, Docker). ML model: {% if ml_ready %}trained and loaded{% else %}not trained — run scripts/train_model.py{% endif %}.
+    Demo URL: <a href="{{ public_demo_url }}">{{ public_demo_url }}</a>
   </p>
   <p class="section-note">
     Post-shortlist: swap synthetic data with IDBI AWS sandbox APIs (transactions, bureau, digital footprint).

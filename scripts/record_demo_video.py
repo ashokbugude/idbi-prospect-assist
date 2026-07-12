@@ -8,10 +8,14 @@ import shutil
 import subprocess
 import sys
 import time
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_URL = "https://idbi-prospect-assist-474562381457.asia-south1.run.app"
+DEFAULT_URL = os.environ.get(
+    "PUBLIC_DEMO_URL",
+    "https://idbi-prospect-assist.onrender.com",
+)
 DEFAULT_PIN = "idbi2026"
 OUTPUT_DIR = ROOT / "docs" / "demo-video"
 
