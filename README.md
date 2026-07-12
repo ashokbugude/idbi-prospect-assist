@@ -101,9 +101,9 @@ $env:PUBLIC_DEMO_URL="https://idbi-prospect-assist.onrender.com"
 python scripts/update_submission_ppt.py
 ```
 
-> Hugging Face Docker Spaces are **paid** — use Render instead. See `docs/HUGGINGFACE_DEPLOY.md`.
+> Hugging Face Docker Spaces are **paid** — use Render instead (`docs/RENDER_DEPLOY.md`).
 
-## Hackathon submission (Jul 9)
+## Hackathon submission
 
 - Deployment URL + GitHub + official PPT PDF
 - See `docs/SUBMISSION_CHECKLIST.md`

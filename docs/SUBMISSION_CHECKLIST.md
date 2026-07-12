@@ -16,7 +16,7 @@
 ## Hack2skill platform (manual)
 
 - [ ] Submit POC form with deployment URL + GitHub link
-- [ ] Upload mandatory PPT PDF (`docs/IDBI_Prospect_Assist_Submission.pptx` → export to PDF in PowerPoint)
+- [ ] Upload mandatory PPT PDF (`input/IDBI_Prospect_Assist_Submission_FILLED.pptx` → export to PDF in PowerPoint)
 - [ ] Complete Startup Information form (5 fields)
 - [ ] Add teammates on Hack2skill (max 4) if available
 

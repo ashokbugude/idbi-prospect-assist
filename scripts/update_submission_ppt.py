@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 from pathlib import Path
 
 from pptx import Presentation
@@ -13,9 +12,8 @@ from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
 
 ROOT = Path(__file__).resolve().parents[1]
-TEMPLATE = ROOT / "input" / "Prototype Submission Deck _ IDBI Innovate.pptx"
-OUTPUT_INPUT = ROOT / "input" / "IDBI_Prospect_Assist_Submission_FILLED.pptx"
-OUTPUT_DOCS = ROOT / "docs" / "IDBI_Prospect_Assist_Submission.pptx"
+TEMPLATE = ROOT / "docs" / "Hack2skill_Template.pptx"
+OUTPUT = ROOT / "input" / "IDBI_Prospect_Assist_Submission_FILLED.pptx"
 
 DEMO_URL = os.environ.get(
     "PUBLIC_DEMO_URL",
@@ -330,11 +328,9 @@ def main() -> int:
         "Team: Srishti GenAI | Leader: Ashok Bugude"
     )
 
-    OUTPUT_DOCS.parent.mkdir(parents=True, exist_ok=True)
-    prs.save(str(OUTPUT_DOCS))
-    shutil.copy2(OUTPUT_DOCS, OUTPUT_INPUT)
-    print(f"Saved: {OUTPUT_DOCS}")
-    print(f"Copied: {OUTPUT_INPUT}")
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    prs.save(str(OUTPUT))
+    print(f"Saved: {OUTPUT}")
     return 0
 
 

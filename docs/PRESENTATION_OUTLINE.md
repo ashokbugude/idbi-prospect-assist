@@ -1,6 +1,6 @@
 # Prospect Assist AI — Hack2skill PPT
 
-**Filled deck (official template):** `docs/IDBI_Prospect_Assist_Submission.pptx`  
+**Filled deck:** `input/IDBI_Prospect_Assist_Submission_FILLED.pptx`  
 Regenerate: `python scripts/update_submission_ppt.py`
 
 Copy each slide below was used as content source; the filled `.pptx` follows the Hack2skill slide structure (15 slides).

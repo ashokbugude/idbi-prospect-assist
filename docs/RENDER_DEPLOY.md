@@ -63,9 +63,20 @@ python scripts/update_submission_ppt.py
 
 ## Free tier notes
 
-- Service **spins down after ~15 min idle** — first visit after sleep takes **30–90 seconds** (cold start)
+- Service **spins down after ~15 min idle** — first visit after sleep takes **30–90 seconds** (Render cold start). This is normal on free tier, not an app bug.
+- After wake-up, pages should load in **1–3 seconds** (dataset is pre-cached at startup).
 - **750 free instance hours/month** — enough for hackathon demo + judging
 - No credit card required for free tier (as of 2026)
+
+### Why it felt slow before
+
+The app was re-scoring all 200 customers on every page load (~1+ second each). **v0.7.0+ caches scores at startup** so navigation is much faster after the instance wakes up.
+
+### Tips for judges
+
+- Open the URL **once before your demo** to wake the instance
+- Wait for the loading spinner — first load after idle is the slow one
+- `/api/health` warms the server; bookmark the dashboard after first successful load
 
 ## Troubleshooting
 

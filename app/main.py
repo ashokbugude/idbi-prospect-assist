@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
-import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from urllib.parse import urlencode
@@ -14,23 +14,38 @@ from fastapi.templating import Jinja2Templates
 
 from app.auth import auth_token, is_authenticated, require_auth, verify_pin
 from app.config import APP_TITLE, APP_VERSION, AUTH_COOKIE, DEPLOY_PLATFORM, HERO_CUSTOMERS, PUBLIC_DEMO_URL
+from app.dataset_store import (
+    get_customer_raw,
+    get_customers,
+    get_impact_metrics,
+    get_ml_report,
+    get_ranked_customers,
+    get_scored_profile,
+    get_backtest_result,
+    warmup,
+)
 from app.scoring import (
     LEAD_TIERS,
     PRODUCT_LABELS,
     TIER_CSS,
-    compute_impact_metrics,
-    rank_customers,
     score_customer,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / "data" / "customers.json"
 DASHBOARD_PAGE_SIZE = 20
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    warmup()
+    yield
+
 
 app = FastAPI(
     title=APP_TITLE,
     description="Track 02 — behavioral repayment capacity + intent scoring for liability customers",
     version=APP_VERSION,
+    lifespan=lifespan,
 )
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
@@ -47,16 +62,8 @@ async def rm_auth_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-def load_customers() -> list[dict]:
-    if not DATA_PATH.exists():
-        from app.data_generator import save_dataset
-
-        save_dataset(DATA_PATH)
-    return json.loads(DATA_PATH.read_text(encoding="utf-8"))
-
-
 def _find_customer(customer_id: str) -> dict | None:
-    return next((c for c in load_customers() if c["customer_id"] == customer_id), None)
+    return get_customer_raw(customer_id)
 
 
 def _apply_filters(
@@ -141,9 +148,10 @@ def _dashboard_table_context(
     min_score: float,
     multi_bank: bool,
     page: int,
+    all_ranked: list[dict] | None = None,
 ) -> dict:
-    all_ranked = rank_customers(load_customers())
-    ranked = _apply_filters(all_ranked, product, tier, min_score, multi_bank_only=multi_bank)
+    ranked_source = all_ranked if all_ranked is not None else get_ranked_customers()
+    ranked = _apply_filters(ranked_source, product, tier, min_score, multi_bank_only=multi_bank)
     customers, pagination = _paginate(ranked, page)
     return {
         "customers": customers,
@@ -155,8 +163,7 @@ def _dashboard_table_context(
 
 
 def _multibank_customers() -> list[dict]:
-    ranked = rank_customers(load_customers())
-    return [c for c in ranked if c.get("has_other_bank_accounts")]
+    return [c for c in get_ranked_customers() if c.get("has_other_bank_accounts")]
 
 
 def _multibank_query(page: int) -> str:
@@ -205,7 +212,7 @@ def _tier_explanation(profile: dict) -> list[str]:
 
 def _dashboard_stats(ranked: list[dict], all_ranked: list[dict]) -> dict:
     total = len(ranked)
-    impact = compute_impact_metrics(load_customers())
+    impact = get_impact_metrics()
     return {
         "total": total,
         "quality_leads": sum(1 for c in ranked if c["lead_tier"] == "Quality Lead"),
@@ -294,9 +301,9 @@ async def dashboard(
     multi_bank: bool = False,
     page: int = 1,
 ):
-    all_ranked = rank_customers(load_customers())
+    all_ranked = get_ranked_customers()
     ranked = _apply_filters(all_ranked, product, tier, min_score, multi_bank_only=multi_bank)
-    table_ctx = _dashboard_table_context(product, tier, min_score, multi_bank, page)
+    table_ctx = _dashboard_table_context(product, tier, min_score, multi_bank, page, all_ranked)
 
     return templates.TemplateResponse(
         "index.html",
@@ -334,31 +341,25 @@ async def dashboard_table_partial(
 
 @app.get("/ml", response_class=HTMLResponse)
 async def ml_credibility_page(request: Request):
-    from app.ml_evaluation import get_ml_credibility_report
-
     return templates.TemplateResponse(
         "ml.html",
-        {"request": request, "report": get_ml_credibility_report(load_customers()), "active": "ml"},
+        {"request": request, "report": get_ml_report(), "active": "ml"},
     )
 
 
 @app.get("/api/ml/evaluation")
 async def api_ml_evaluation():
-    from app.ml_evaluation import get_ml_credibility_report
-
-    return get_ml_credibility_report(load_customers())
+    return get_ml_report()
 
 
 @app.get("/api/impact/backtest")
 async def api_impact_backtest():
-    from app.impact import run_conversion_backtest
-
-    return run_conversion_backtest(load_customers(), trials=500)
+    return get_backtest_result()
 
 
 @app.get("/impact", response_class=HTMLResponse)
 async def impact_page(request: Request):
-    impact = compute_impact_metrics(load_customers())
+    impact = get_impact_metrics()
     return templates.TemplateResponse(
         "impact.html",
         {"request": request, "impact": impact, "active": "impact"},
@@ -371,7 +372,7 @@ async def multi_bank_page(request: Request, page: int = 1):
         "multi_bank.html",
         {
             "request": request,
-            "all_customers": load_customers(),
+            "all_customers": get_customers(),
             "hero_aa_customer": HERO_CUSTOMERS["multibank_uplift"],
             "active": "multi-bank",
             **_multibank_table_context(page),
@@ -425,7 +426,7 @@ async def api_model_card():
 
 @app.get("/api/impact/methodology")
 async def api_impact_methodology():
-    impact = compute_impact_metrics(load_customers())
+    impact = get_impact_metrics()
     return {
         "impact_summary": impact,
         "methodology": impact.get("methodology", {}),
@@ -460,7 +461,7 @@ async def customer_detail(request: Request, customer_id: str):
     if not raw:
         return RedirectResponse(url="/", status_code=302)
 
-    profile = score_customer(raw)
+    profile = get_scored_profile(customer_id) or score_customer(raw)
     timeline = build_transaction_timeline(raw)
     rm_brief = generate_rm_brief(profile)
     need = float(raw.get("need_spend_ratio", 0.5))
@@ -485,7 +486,7 @@ async def customer_detail(request: Request, customer_id: str):
 
 @app.get("/api/customers")
 async def api_customers(limit: int = 100, tier: str | None = None):
-    ranked = rank_customers(load_customers())
+    ranked = get_ranked_customers()
     if tier:
         ranked = [c for c in ranked if c["lead_tier"] == tier]
     return {"count": len(ranked), "customers": ranked[:limit]}
@@ -496,17 +497,17 @@ async def api_customer_detail(customer_id: str):
     raw = _find_customer(customer_id)
     if not raw:
         return {"error": "Customer not found"}
-    return score_customer(raw)
+    return get_scored_profile(customer_id) or score_customer(raw)
 
 
 @app.get("/api/impact")
 async def api_impact():
-    return compute_impact_metrics(load_customers())
+    return get_impact_metrics()
 
 
 @app.get("/api/rm-queue")
 async def api_rm_queue(limit: int = 20):
-    ranked = rank_customers(load_customers())
+    ranked = get_ranked_customers()
     queue = [c for c in ranked if c.get("rm_call_eligible")]
     return {"count": len(queue), "customers": queue[:limit]}
 
@@ -514,7 +515,7 @@ async def api_rm_queue(limit: int = 20):
 @app.get("/api/rm-queue/export")
 async def api_rm_queue_export():
     """CSV export for RM outreach lists."""
-    ranked = rank_customers(load_customers())
+    ranked = get_ranked_customers()
     queue = [c for c in ranked if c.get("rm_call_eligible")]
 
     output = io.StringIO()
@@ -550,7 +551,7 @@ async def api_rm_queue_export():
 @app.get("/api/multi-bank")
 async def api_multi_bank(limit: int = 50):
     """Customers with multi-bank footprint — holistic income view."""
-    ranked = rank_customers(load_customers())
+    ranked = get_ranked_customers()
     multi = [c for c in ranked if c.get("has_other_bank_accounts")]
     return {
         "count": len(multi),
@@ -573,7 +574,7 @@ async def api_multi_bank(limit: int = 50):
 
 @app.get("/api/demo-comparison")
 async def api_demo_comparison():
-    impact = compute_impact_metrics(load_customers())
+    impact = get_impact_metrics()
     return {
         "before": {
             "label": "Spray & pray (all leads)",
@@ -620,7 +621,7 @@ async def api_rm_brief(customer_id: str):
     raw = _find_customer(customer_id)
     if not raw:
         return JSONResponse({"error": "Customer not found"}, status_code=404)
-    return generate_rm_brief(score_customer(raw))
+    return generate_rm_brief(get_scored_profile(customer_id) or score_customer(raw))
 
 
 @app.get("/api/customer/{customer_id}/underwriter-pdf")
@@ -630,7 +631,7 @@ async def api_underwriter_pdf(customer_id: str):
     raw = _find_customer(customer_id)
     if not raw:
         return JSONResponse({"error": "Customer not found"}, status_code=404)
-    profile = score_customer(raw)
+    profile = get_scored_profile(customer_id) or score_customer(raw)
     pdf_bytes = build_underwriter_pdf(profile, raw)
     return StreamingResponse(
         iter([pdf_bytes]),
@@ -653,7 +654,7 @@ async def sandbox_stub(customer_id: str):
     if not raw:
         return {"error": "Customer not found", "sandbox": True}
 
-    profile = score_customer(raw)
+    profile = get_scored_profile(customer_id) or score_customer(raw)
     timeline = build_transaction_timeline(raw)
     return {
         "sandbox": True,
@@ -690,7 +691,7 @@ async def sandbox_stub(customer_id: str):
 
 @app.get("/api/stats")
 async def api_stats():
-    return compute_impact_metrics(load_customers())
+    return get_impact_metrics()
 
 
 @app.get("/api/health")
@@ -704,4 +705,5 @@ async def health():
         "ml_ready": get_model().is_ready,
         "deploy_platform": DEPLOY_PLATFORM,
         "demo_url": PUBLIC_DEMO_URL,
+        "cache_warmed": True,
     }
