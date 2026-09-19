@@ -1,0 +1,13 @@
+# The repository is stored with LF endings. Without this, editing on Windows
+# rewrites files to CRLF and every touched file shows as fully modified, which
+# buries real changes in line-ending churn.
+* text=auto eol=lf
+
+# Binary assets must never be normalised.
+*.png   binary
+*.jpg   binary
+*.svg   text eol=lf
+*.pptx  binary
+*.mp4   binary
+*.joblib binary
+*.pdf   binary

@@ -85,8 +85,14 @@ def score_repayment_capacity(customer: dict) -> DimensionScore:
         score += 6
         reasons.append("Thin disposable income after mandatory spends")
 
-    dti = customer.get("debt_to_income_ratio", 0)
-    if dti <= 0.3:
+    dti_raw = customer.get("debt_to_income_ratio")
+    dti = float(dti_raw) if dti_raw is not None else 0.0
+    if dti_raw is None:
+        # Unknown obligations are not good news. Score neutrally and say so,
+        # rather than letting an empty field imply a debt-free customer.
+        score += 8
+        reasons.append("Existing obligations not on file — sized conservatively pending bureau pull")
+    elif dti <= 0.3:
         score += 25
         reasons.append("Low existing debt burden supports new EMI")
     elif dti <= 0.45:
@@ -149,8 +155,11 @@ def score_behavioral_discipline(customer: dict) -> DimensionScore:
     score = 50.0
     reasons: list[str] = []
 
-    day1_ratio = customer.get("salary_day_spend_ratio", 0)
-    if day1_ratio >= 0.75:
+    day1_raw = customer.get("salary_day_spend_ratio")
+    day1_ratio = float(day1_raw) if day1_raw is not None else 0.0
+    if day1_raw is None:
+        reasons.append("Salary-day spend pattern unavailable — discipline scored neutrally")
+    elif day1_ratio >= 0.75:
         score -= 25
         reasons.append("Spends most of salary within 1–2 days — weak financial discipline")
     elif day1_ratio >= 0.5:
@@ -160,9 +169,12 @@ def score_behavioral_discipline(customer: dict) -> DimensionScore:
         score += 15
         reasons.append("Salary utilization spread across month — disciplined pattern")
 
-    luxury = customer.get("luxury_spend_ratio", 0)
-    need = customer.get("need_spend_ratio", 0)
-    if luxury > 0.22 and customer.get("avg_monthly_balance", 0) < customer.get("monthly_income", 0) * 0.3:
+    luxury_raw = customer.get("luxury_spend_ratio")
+    luxury = float(luxury_raw) if luxury_raw is not None else 0.0
+    need = customer.get("need_spend_ratio") or 0
+    if luxury_raw is None:
+        pass  # no spend mix on file — neither credit nor penalty
+    elif luxury > 0.22 and customer.get("avg_monthly_balance", 0) < customer.get("monthly_income", 0) * 0.3:
         score -= 15
         reasons.append("Luxury spend high relative to balance buffer")
     elif luxury <= 0.15:
@@ -210,7 +222,83 @@ def score_behavioral_discipline(customer: dict) -> DimensionScore:
     )
 
 
+# The five fields supplied by the sandbox digital-footprint endpoint.
+DIGITAL_FOOTPRINT_FIELDS = (
+    "loan_page_visits_30d",
+    "loan_calculator_uses",
+    "avg_session_minutes",
+    "application_started",
+    "window_shopping_flag",
+)
+
+# Starting intent for a customer with no digital trail at all. Deliberately below
+# the Serious gate of 42 on its own: an established relationship is not a purchase
+# signal. A positive transaction signal (a recent large debit) is what lifts the
+# lead into the queue. Absence of evidence must not be evidence against a
+# branch-acquired customer — but it must not manufacture intent either.
+NO_DIGITAL_BASELINE_INTENT = 26.0
+
+
+# Only the measurable signals count as a footprint. A payload carrying just
+# `window_shopping_flag: false` and `application_started: false` — exactly what a
+# sandbox returns for a customer with no digital activity — is not evidence that
+# the digital channel was observed, and must not suppress the fallback.
+DIGITAL_MEASURABLE_FIELDS = (
+    "loan_page_visits_30d",
+    "loan_calculator_uses",
+    "avg_session_minutes",
+)
+
+
+def has_digital_footprint(customer: dict) -> bool:
+    """False when the digital endpoint returned nothing measurable."""
+    return any(customer.get(field) is not None for field in DIGITAL_MEASURABLE_FIELDS)
+
+
+def _score_intent_without_digital(customer: dict) -> DimensionScore:
+    """
+    Transaction-only intent for branch-acquired customers.
+
+    Scoring these leads at zero would exclude an entire acquisition channel from
+    the RM queue — an integration failure and a fairness problem, since customers
+    without a digital trail skew older, rural and branch-onboarded.
+    """
+    score = NO_DIGITAL_BASELINE_INTENT
+    reasons = [
+        "No digital footprint on file — intent inferred from transaction behaviour only "
+        "(typical of a branch-acquired customer)"
+    ]
+
+    if customer.get("recent_large_debit"):
+        score += 18
+        reasons.append("Recent large debit may indicate an imminent funding need")
+    if customer.get("relationship_years", 0) >= 3:
+        score += 10
+        reasons.append("Established liability relationship increases conversion potential")
+    if customer.get("has_other_bank_accounts"):
+        score += 4
+        reasons.append("Multi-bank footprint — consider an AA consent request to confirm intent")
+
+    return DimensionScore(
+        name="Purchase Intent",
+        score=_clamp(score),
+        reasons=reasons[:4],
+        details={
+            "data_basis": "transaction_only",
+            "digital_footprint_available": False,
+            "loan_page_visits_30d": None,
+            "loan_calculator_uses": None,
+            "avg_session_minutes": None,
+            "application_started": None,
+            "window_shopping_flag": False,
+        },
+    )
+
+
 def score_intent(customer: dict) -> DimensionScore:
+    if not has_digital_footprint(customer):
+        return _score_intent_without_digital(customer)
+
     score = 0.0
     reasons: list[str] = []
 
@@ -259,6 +347,8 @@ def score_intent(customer: dict) -> DimensionScore:
         score=_clamp(score),
         reasons=reasons[:4],
         details={
+            "data_basis": "digital_and_transaction",
+            "digital_footprint_available": True,
             "loan_page_visits_30d": visits,
             "loan_calculator_uses": calc,
             "avg_session_minutes": session_mins,
@@ -296,6 +386,24 @@ def _composite_score(
 
 
 def assign_lead_tier(
+    repayment: DimensionScore,
+    behavior: DimensionScore,
+    intent: DimensionScore,
+    customer: dict,
+) -> str:
+    """Tier assignment, with a ceiling applied when intent is unverified."""
+    tier = _assign_lead_tier_raw(repayment, behavior, intent, customer)
+
+    # A Quality Lead carries a 24-hour callback SLA and a pre-qualified pitch.
+    # That claim needs evidenced purchase intent. When the digital footprint is
+    # missing entirely the lead is capped at Serious — worth an RM's time, but
+    # the RM confirms intent on the call rather than assuming it.
+    if tier == "Quality Lead" and not has_digital_footprint(customer):
+        return "Serious"
+    return tier
+
+
+def _assign_lead_tier_raw(
     repayment: DimensionScore,
     behavior: DimensionScore,
     intent: DimensionScore,
@@ -535,12 +643,13 @@ def score_customer_rules(customer: dict) -> dict:
     composite_lead_score = _composite_score(repayment, behavior, intent, customer)
 
     return {
-        "customer_id": customer["customer_id"],
-        "name": customer["name"],
-        "city": customer["city"],
+        "customer_id": customer.get("customer_id", "UNKNOWN"),
+        "name": customer.get("name") or customer.get("customer_id", "Unnamed customer"),
+        "city": customer.get("city") or "Not on file",
         "segment": customer.get("segment", "Retail"),
         "employment_type": customer.get("employment_type", "salaried"),
         "monthly_income": customer.get("monthly_income", 0),
+        "relationship_years": customer.get("relationship_years", 0),
         "inferred_monthly_income": customer.get("inferred_monthly_income"),
         "income_confidence": customer.get("income_confidence"),
         "holistic_monthly_income": customer.get("holistic_monthly_income"),
@@ -635,9 +744,9 @@ def score_customer(customer: dict, use_ml: bool = True) -> dict:
         rule_profile["scoring_mode"] = "rules_only"
         return rule_profile
 
-    from app.ml_model import blend_with_rules, get_model
-
     try:
+        from app.ml_model import blend_with_rules, get_model
+
         model = get_model()
         if not model.is_ready:
             rule_profile["scoring_mode"] = "rules_only"
@@ -645,9 +754,13 @@ def score_customer(customer: dict, use_ml: bool = True) -> dict:
             return rule_profile
         ml = model.predict(customer)
         return blend_with_rules(rule_profile, customer, ml)
-    except Exception:
+    except Exception as exc:  # missing ML deps must degrade, never 500 the request
         rule_profile["scoring_mode"] = "rules_fallback"
-        rule_profile["ml_enhancement"] = {"enabled": False, "error": "model_unavailable"}
+        rule_profile["ml_enhancement"] = {
+            "enabled": False,
+            "error": "model_unavailable",
+            "detail": type(exc).__name__,
+        }
         return rule_profile
 
 

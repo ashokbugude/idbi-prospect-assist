@@ -10,3 +10,5 @@ dist/
 build/
 .pytest_cache/
 input/
+app/data/outcomes.jsonl
+app/data/audit_log.jsonl

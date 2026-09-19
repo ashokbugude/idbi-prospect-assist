@@ -1,13 +1,13 @@
 # IDBI Innovate 2026 — Track 02 Submission Checklist
 
-**Team:** Srishti GenAI · **Deadline:** Jul 9, 2026 · **Version:** 0.7.0
+**Team:** Srishti GenAI · **Deadline:** Jul 9, 2026 (round 1, submitted) · **Version:** 0.9.0
 
 ## Code & deployment
 
 - [ ] Push repo to GitHub: `https://github.com/ashokbugude/idbi-prospect-assist`
 - [ ] Deploy live demo on **Render (free)** — see `docs/RENDER_DEPLOY.md`
 - [ ] Verify public URL loads dashboard (login PIN: `idbi2026`)
-- [ ] Verify `/api/health` returns `version: 0.7.0` and `ml_ready: true`
+- [ ] Verify `/api/health` returns `version: 0.9.0` and `ml_ready: true`
 - [ ] Test RM CSV export: `/api/rm-queue/export`
 - [ ] Test sandbox stub: `/api/sandbox/IDBI-L10010`
 - [ ] Test AA flow on `/multi-bank` (hero: `IDBI-L10055` — tier uplift after consent)
@@ -79,6 +79,21 @@ Public APIs (no login): /api/health · /api/impact · /api/sandbox/IDBI-L10010
 6. **Architecture (15s):** AWS diagram + compliance + sandbox stub
 7. **Ask (10s):** Ready for IDBI sandbox pilot with RM teams
 
+## Refinement-round demo additions (v0.8.0)
+
+8. **Actions (30s):** `/actions` — "here is the branch's morning, costed in RM minutes";
+   11.8 RM hours recovered by suppression, 95.8% of pipeline value captured within capacity
+9. **Uplift (30s):** `/customer/IDBI-L10055` — Serious, 7.6 points short of Quality; one lever closes it;
+   stress test says Fragile, so size conservatively
+10. **Governance (40s):** `/governance` — four-fifths audit with both findings shown openly and the AA
+    mitigation simulated; then Model risk (append-only audit log, PSI drift with the alarm firing) and
+    Data quality (zero failures when any sandbox source is removed)
+11. **Outcomes (30s):** `/outcomes` — "the system finds out whether it was right". Calibration shows
+    Serious running 7.9 pp above its assumption; retrain readiness at 49%. Say plainly that today's ML
+    moves zero tiers because it learns from rules, and that this loop is what changes that
+12. **Vernacular + what-if (20s):** `/customer/IDBI-L10055` — switch the brief to हिन्दी, then move the
+    DTI slider and watch Serious become a Quality Lead live
+
 ## What judges see
 
 | Capability | Endpoint / page |
@@ -98,6 +113,18 @@ Public APIs (no login): /api/health · /api/impact · /api/sandbox/IDBI-L10010
 | CSV for RMs | `/api/rm-queue/export` |
 | Sandbox integration stub | `/api/sandbox/{id}` |
 | RM auth gate | `/login` |
+| Lead Uplift Simulator (counterfactual) | `/customer/{id}` · `/api/customer/{id}/uplift` |
+| Next Best Action + branch capacity plan | `/actions` · `/api/next-best-action` |
+| Fair-lending audit + DPDP evidence | `/fairness` · `/api/fairness` |
+| USP catalogue | `/usps` · `/api/usps` |
+| Glossary | `/glossary` · `/api/glossary` |
+| Requirement coverage review | `docs/TRACK02_GAP_ANALYSIS.md` |
+| Outcome feedback loop + calibration | `/outcomes` · `/api/outcomes` |
+| Decision audit log | `/governance?tab=model-risk` · `/api/audit/export` |
+| Drift monitoring (PSI) | `/governance?tab=model-risk` · `/api/monitoring` |
+| Data-quality + degradation gates | `/governance?tab=data-quality` · `/api/data-quality` |
+| Vernacular call scripts | `/customer/{id}` -> language switcher |
+| Live what-if simulator | `POST /api/customer/{id}/simulate` |
 
 ## Aligned metrics (seed=42, n=200)
 

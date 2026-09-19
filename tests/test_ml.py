@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
 
 from app.data_generator import generate_dataset
@@ -69,3 +68,65 @@ def test_blend_low_confidence_keeps_rules(window_shopper, trained_model):
     assert out["composite_lead_score"] == rules["composite_lead_score"]
     assert out["lead_tier"] == rules["lead_tier"]
 
+
+
+def test_window_shop_catch_is_not_reverted_by_the_score_floor():
+    """
+    A confident ML risk downgrade must survive the Quality/Serious score floor.
+
+    The floor previously restored `rule_tier` unconditionally, so the
+    window-shopping catch in _safe_tier_fusion could never fire for a Serious
+    lead — the branch was dead and the reported detection lift was pinned at 0%.
+    """
+    rule_profile = {
+        "customer_id": "IDBI-L99001",
+        "name": "Test Serious Browser",
+        "composite_lead_score": 65.0,
+        "lead_tier": "Serious",
+        "top_product": "personal_loan",
+        "recommended_action": "Schedule assisted journey",
+        "purchase_intent": {"score": 61, "reasons": ["Deep engagement"], "details": {}},
+    }
+    customer = {"window_shopping_flag": True, "salary_day_spend_ratio": 0.8}
+    ml = {
+        "enabled": True,
+        "ml_composite_score": 45.0,
+        "ml_tier": "Window-shop Risk",
+        "ml_tier_probability": 0.91,
+        "ml_confidence": 0.8,
+        "ml_reasons": ["ML: Window-shopping pattern reduces lead quality (-1.20)"],
+    }
+
+    out = blend_with_rules(dict(rule_profile), customer, ml)
+
+    assert out["lead_tier"] == "Window-shop Risk", "the risk downgrade was reverted"
+    assert out["rm_call_eligible"] is False
+    # the score floor still holds for the Serious rule tier
+    assert out["composite_lead_score"] >= rule_profile["composite_lead_score"]
+
+
+def test_score_floor_still_protects_serious_leads_from_noise():
+    """A non-risk ML disagreement must still leave a Serious lead untouched."""
+    rule_profile = {
+        "customer_id": "IDBI-L99002",
+        "name": "Test Serious",
+        "composite_lead_score": 65.0,
+        "lead_tier": "Serious",
+        "top_product": "personal_loan",
+        "recommended_action": "Schedule assisted journey",
+        "purchase_intent": {"score": 61, "reasons": ["Deep engagement"], "details": {}},
+    }
+    customer = {"window_shopping_flag": False, "salary_day_spend_ratio": 0.2}
+    ml = {
+        "enabled": True,
+        "ml_composite_score": 50.0,
+        "ml_tier": "Interested",
+        "ml_tier_probability": 0.95,
+        "ml_confidence": 0.9,
+        "ml_reasons": [],
+    }
+
+    out = blend_with_rules(dict(rule_profile), customer, ml)
+
+    assert out["lead_tier"] == "Serious"
+    assert out["composite_lead_score"] == rule_profile["composite_lead_score"]

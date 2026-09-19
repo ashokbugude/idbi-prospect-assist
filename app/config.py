@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-APP_VERSION = "0.7.0"
+APP_VERSION = "0.9.0"
 APP_TITLE = "IDBI Prospect Assist AI"
 
 # Public demo URL (override after deploy — Render free tier default)
@@ -27,6 +27,13 @@ AUTH_EXEMPT_PREFIXES = (
     "/api/ml/model-card",
     "/api/ml/evaluation",
     "/api/stats",
+    "/api/fairness",
+    "/api/usps",
+    "/api/glossary",
+    "/api/monitoring",
+    "/api/data-quality",
+    "/api/outcomes",
+    "/api/ingest",
 )
 
 # Documented demo walkthrough customers (seed=42 dataset)

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Glossary — IDBI Prospect Assist AI{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <span class="badge">Reference</span>
+  <h1>Glossary</h1>
+  <p class="subtitle">
+    Every term and abbreviation used across this repository — {{ glossary.count }} entries across
+    {{ glossary.categories|length }} categories. A Track 02 panel mixes banking, risk, compliance and
+    engineering readers; rather than dilute the product language, the product ships its dictionary.
+  </p>
+</div>
+
+<div class="glossary-toolbar">
+  <input type="search" id="glossary-search" placeholder="Search — e.g. DTI, four-fifths, p95"
+         autocomplete="off" aria-label="Search the glossary" />
+  <button class="chip" type="button" data-cat="all" aria-pressed="true">All ({{ glossary.count }})</button>
+  {% for c in glossary.categories %}
+  <button class="chip" type="button" data-cat="{{ c.name }}" aria-pressed="false">{{ c.name }} ({{ c.count }})</button>
+  {% endfor %}
+</div>
+
+<p class="section-note" id="glossary-count">Showing all {{ glossary.count }} entries.</p>
+
+<div class="glossary-list" id="glossary-list">
+  {% for e in glossary.entries %}
+  <article class="glossary-item" data-cat="{{ e.category }}" data-search="{{ e.search }}">
+    <div class="glossary-head">
+      <h3><span class="term">{{ e.term }}</span>{% if e.expansion %} <span class="expansion">— {{ e.expansion }}</span>{% endif %}</h3>
+      <span class="pill pill-muted cat">{{ e.category }}</span>
+    </div>
+    <p>{{ e.definition }}</p>
+    <div class="where">{{ e.where }}</div>
+  </article>
+  {% endfor %}
+</div>
+
+<div class="glossary-empty" id="glossary-empty" hidden>
+  No entry matches that search. Try an abbreviation such as <strong>AA</strong>, <strong>DTI</strong> or
+  <strong>DPDP</strong>.
+</div>
+
+<section class="panel-section" style="margin-top:26px">
+  <h2>How this list is kept honest</h2>
+  <p>{{ glossary.note }}</p>
+  <p class="section-note">Machine-readable: <a href="/api/glossary">/api/glossary</a></p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const search = document.getElementById('glossary-search');
+  const items = Array.from(document.querySelectorAll('#glossary-list .glossary-item'));
+  const chips = Array.from(document.querySelectorAll('.glossary-toolbar .chip'));
+  const counter = document.getElementById('glossary-count');
+  const empty = document.getElementById('glossary-empty');
+  let activeCat = 'all';
+
+  function apply() {
+    const q = (search.value || '').trim().toLowerCase();
+    let shown = 0;
+    items.forEach(function (el) {
+      const catOk = activeCat === 'all' || el.dataset.cat === activeCat;
+      const textOk = !q || (el.dataset.search || '').indexOf(q) !== -1;
+      const visible = catOk && textOk;
+      el.hidden = !visible;
+      if (visible) shown++;
+    });
+    counter.textContent = shown === items.length
+      ? 'Showing all ' + items.length + ' entries.'
+      : 'Showing ' + shown + ' of ' + items.length + ' entries.';
+    empty.hidden = shown !== 0;
+  }
+
+  search.addEventListener('input', apply);
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      activeCat = chip.dataset.cat;
+      chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
+      apply();
+    });
+  });
+})();
+</script>
+{% endblock %}

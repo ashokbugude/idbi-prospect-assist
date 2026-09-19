@@ -102,8 +102,14 @@ def idbi_only_baseline(customer: dict) -> dict:
 
 
 def enrich_customer(customer: dict) -> dict:
-    """Return enriched copy used by scoring engine."""
-    c = dict(customer)
+    """Return enriched copy used by scoring engine.
+
+    Coercion runs first so a feed that sends numbers as strings, or nulls instead
+    of absent keys, degrades to the scorer's unknown handling instead of raising.
+    """
+    from app.ingest import coerce_customer
+
+    c, _ = coerce_customer(customer)
     income = infer_monthly_income(c)
     c.update(income)
 

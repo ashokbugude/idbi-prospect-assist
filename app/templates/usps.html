@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}USPs — IDBI Prospect Assist AI{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <span class="badge">Differentiation</span>
+  <h1>Unique Selling Propositions</h1>
+  <p class="subtitle">
+    {{ catalogue.count }} capabilities, each linked to the place in this running build where it can be
+    verified. {{ catalogue.new_count }} have been added since the round-1 submission. "Typical entry"
+    describes the common alternative approach to the same requirement — not any specific competitor.
+  </p>
+</div>
+
+<div class="kpi-row">
+  {% for p in catalogue.pillars %}
+  <div class="kpi">
+    <div class="value">{{ p.count }}</div>
+    <div class="label">{{ p.name }}</div>
+    <div class="sub">{% if p.new_count %}{{ p.new_count }} added since round 1{% else %}Core since round 1{% endif %}</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% for pillar in catalogue.pillars %}
+<div class="pillar-head">
+  <h2>{{ pillar.name }}</h2>
+  <span class="strapline">{{ pillar.strapline }}</span>
+</div>
+<div class="usp-grid">
+  {% for u in pillar.entries %}
+  <article class="usp-card">
+    {% if u.is_new %}<div class="usp-flag"><span class="pill pill-new">New since round 1</span></div>{% endif %}
+    <h3>{{ u.title }}</h3>
+    <p class="claim">{{ u.claim }}</p>
+    <p class="why"><strong>Why it matters to IDBI:</strong> {{ u.why_idbi }}</p>
+    <div class="evidence"><a href="{{ u.evidence_url }}">See it: {{ u.evidence_label }} &rarr;</a></div>
+    <p class="contrast"><strong>Typical entry:</strong> {{ u.typical_entry }}</p>
+  </article>
+  {% endfor %}
+</div>
+{% endfor %}
+
+<section class="panel-section" style="margin-top:28px">
+  <h2>Traceability to the IDBI orientation</h2>
+  <p class="section-lead">
+    Every requirement stated in the Track 02 AMA is mapped to the module that implements it and the page
+    that demonstrates it. The full matrix ships in the repository at <code>docs/AMA_ALIGNMENT.md</code>.
+  </p>
+  <div class="detail-kv wide">
+    <div><span>~1% conversion / window shoppers</span><strong>Window-shop override + suppression credit</strong></div>
+    <div><span>Repayment capacity beyond salary</span><strong>income_inference.py + AA holistic view</strong></div>
+    <div><span>Need vs want vs luxury</span><strong>Spend segmentation + timeline tags</strong></div>
+    <div><span>Day-1 salary spend</span><strong>Discipline + delinquency pillars</strong></div>
+    <div><span>Future delinquency from spend</span><strong>12-month stress score (17% of composite)</strong></div>
+    <div><span>Multi-bank / Account Aggregator</span><strong>Consent → fetch → re-score</strong></div>
+    <div><span>Self-employed / gig income</span><strong>Industry margin model</strong></div>
+    <div><span>≥32% quality conversion</span><strong>Monte Carlo backtest with 90% interval</strong></div>
+    <div><span>Human-in-loop, no auto decision</span><strong>±8 pt nudge ceiling + underwriter packet</strong></div>
+    <div><span>AWS sandbox integration</span><strong>Typed field contract + live stub</strong></div>
+  </div>
+  <p class="section-note">
+    {{ catalogue.note }} · Machine-readable: <a href="/api/usps">/api/usps</a>
+  </p>
+</section>
+{% endblock %}
