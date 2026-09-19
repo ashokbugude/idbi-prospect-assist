@@ -28,7 +28,7 @@ AUTH_EXEMPT_PREFIXES = (
     "/api/ml/evaluation",
     "/api/stats",
     "/api/fairness",
-    "/api/usps",
+    "/api/differentiators",
     "/api/glossary",
     "/api/monitoring",
     "/api/data-quality",

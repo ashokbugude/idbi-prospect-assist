@@ -414,7 +414,7 @@ USPS: list[tuple[str, str, str, str, str, str, str, str, bool]] = [
      "Every stated requirement from the AMA is mapped to the module that implements it and the page that "
      "demonstrates it.",
      "It lets a reviewer check coverage in two minutes instead of hunting through the app.",
-     "Requirement traceability matrix", "/usps",
+     "Requirement traceability matrix", "/differentiators",
      "Describes features without mapping them to the brief.", False),
 ]
 

@@ -45,7 +45,7 @@ Addresses IDBI's stated pain: **~1% lead conversion** with too many window-shopp
 | `/architecture` | AWS diagram + compliance + pilot KPIs |
 | `/actions` | Next Best Action — branch playbook, today's queue, capacity plan |
 | `/fairness` | Fair-lending audit, proxy register, DPDP data inventory |
-| `/usps` | 34 differentiators, each linked to verifiable evidence in the app |
+| `/differentiators` | 34 differentiators, each linked to verifiable evidence in the app |
 | `/glossary` | 153 terms and abbreviations used across the repo, searchable |
 | `/outcomes` | Feedback loop — dispositions, calibration, retrain readiness |
 | `/governance` | Fairness &amp; bias · Model risk (audit + drift) · Data quality |
@@ -115,7 +115,7 @@ python scripts/benchmark.py
 | `GET /api/customer/{id}/next-best-action` | Costed, ranked action list for one lead |
 | `GET /api/next-best-action` | Branch-wide action plan and capacity utilisation |
 | `GET /api/fairness` | Fair-lending audit (public — no login) |
-| `GET /api/usps` | USP catalogue (public — no login) |
+| `GET /api/differentiators` | USP catalogue (public — no login) |
 | `GET /api/glossary` | Glossary (public — no login) |
 | `GET/POST /api/outcomes` | Read the feedback loop, or record an RM disposition |
 | `GET /api/monitoring` | Population drift (PSI) per feature (public) |

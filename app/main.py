@@ -733,13 +733,13 @@ async def api_customer_simulate(
     }
 
 
-@app.get("/usps", response_class=HTMLResponse)
-async def usps_page(request: Request):
+@app.get("/differentiators", response_class=HTMLResponse)
+async def differentiators_page(request: Request):
     from app.usp import build_usp_catalogue
 
     return templates.TemplateResponse(
-        "usps.html",
-        {"request": request, "catalogue": build_usp_catalogue(), "active": "usps"},
+        "differentiators.html",
+        {"request": request, "catalogue": build_usp_catalogue(), "active": "differentiators"},
     )
 
 
@@ -782,8 +782,8 @@ async def api_fairness():
     return get_fairness_report()
 
 
-@app.get("/api/usps")
-async def api_usps():
+@app.get("/api/differentiators")
+async def api_differentiators():
     from app.usp import build_usp_catalogue
 
     return build_usp_catalogue()
@@ -1091,7 +1091,7 @@ async def health():
             "/api/monitoring",
             "/api/data-quality",
             "/api/outcomes",
-            "/api/usps",
+            "/api/differentiators",
             "/api/glossary",
         ],
     }

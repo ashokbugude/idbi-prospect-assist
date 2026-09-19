@@ -250,7 +250,7 @@ TERMS: list[tuple[str, str, str, str, str]] = [
      "A game-theoretic method for attributing a model's output to its input features. Useful to a data "
      "scientist, but not an instruction an RM can act on — which is why this build ships a counterfactual "
      "uplift simulator alongside feature contributions rather than instead of them.",
-     "ML layer · contrasted on /usps"),
+     "ML layer · contrasted on /differentiators"),
     ("Disparate impact ratio", "", "Responsible AI",
      "A group's selection rate divided by the highest group's selection rate. Below 0.80 it fails the four-fifths rule and requires justification or mitigation.",
      "/fairness"),
@@ -378,7 +378,7 @@ TERMS: list[tuple[str, str, str, str, str]] = [
      "Fetching a page fragment without a full reload — used for dashboard pagination and filters.",
      "static/nav.js"),
     ("API", "Application Programming Interface", "Engineering & deployment",
-     "The machine-readable surface. Judge-facing endpoints are deliberately public: /api/health, /api/impact, /api/sandbox/{id}, /api/fairness, /api/usps, /api/glossary.",
+     "The machine-readable surface. Judge-facing endpoints are deliberately public: /api/health, /api/impact, /api/sandbox/{id}, /api/fairness, /api/differentiators, /api/glossary.",
      "Application routes"),
     ("API Gateway", "", "Engineering & deployment",
      "AWS managed front door (TLS, WAF, rate limiting) in the post-shortlist production design.",
@@ -502,8 +502,8 @@ TERMS: list[tuple[str, str, str, str, str]] = [
      "The IDBI Innovate 2026 problem statement this repository answers: lift ~1% liability-lead conversion using behavioural signals.",
      "Everywhere"),
     ("USP", "Unique Selling Proposition", "Competition & process",
-     "A capability this build has that a typical Track 02 entry does not. Catalogued with evidence links on /usps.",
-     "USP catalogue · /usps"),
+     "A capability this build has that a typical Track 02 entry does not. Catalogued with evidence links on /differentiators.",
+     "USP catalogue · /differentiators"),
     ("UI", "User Interface", "Competition & process",
      "The RM-facing screens. Deliberately plain, dense and fast — built for a branch desktop, not a demo reel.",
      "User interface"),
