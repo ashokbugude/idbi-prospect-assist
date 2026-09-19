@@ -1,21 +1,29 @@
 {% extends "base.html" %}
-{% block title %}RM Login — IDBI Prospect Assist AI{% endblock %}
+{% block title %}Demo Access — Prospect Assist AI (IDBI Innovate 2026 prototype){% endblock %}
 
 {% block content %}
 <div class="login-panel">
-  <span class="badge">RM Secure Access</span>
+  <span class="badge">Hackathon prototype</span>
   <h1>Prospect Assist AI</h1>
-  <p class="subtitle">Enter your demo RM PIN to access the lead intelligence dashboard.</p>
+  <p class="subtitle">Track 02 entry for IDBI Innovate 2026. Enter the demo PIN below to open the judge walkthrough.</p>
   {% if request.query_params.get('error') %}
   <p class="insight-banner error-banner">Invalid PIN — try again.</p>
   {% endif %}
   <form class="filters login-form" method="post" action="/login">
     <label>
-      RM PIN
-      <input type="password" name="pin" placeholder="Demo PIN" required autofocus />
+      Demo PIN
+      <input type="text" name="pin" placeholder="Demo PIN" required autofocus
+             autocomplete="off" autocapitalize="off" spellcheck="false" />
     </label>
-    <button type="submit">Sign in</button>
+    <button type="submit">Open demo</button>
   </form>
   <p class="section-note">Demo PIN for judges: <code>idbi2026</code></p>
+  <p class="proto-notice">
+    <strong>This is not an IDBI Bank system.</strong>
+    Independent prototype built for the IDBI Innovate 2026 hackathon — not affiliated with,
+    endorsed by, or operated by IDBI Bank Ltd. Every customer, account and transaction shown
+    is synthetic test data. The PIN above is a published demo gate, printed here in the open;
+    it is not a banking credential and protects nothing real.
+  </p>
 </div>
 {% endblock %}

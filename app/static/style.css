@@ -1447,3 +1447,36 @@ body:has(.login-panel) .page-main { display: grid; place-items: center; min-heig
 .spend-chart + .section-note,
 .geo-map-mock + .section-note,
 form + .section-note { margin-top: 14px; }
+
+/* --------------------------------------------------------------------------
+   Prototype provenance
+   The public surface carries IDBI branding for a bank-run hackathon. Said
+   plainly on the login panel and in the footer of every page so neither a
+   judge nor a Safe Browsing classifier can read it as a bank login.
+   -------------------------------------------------------------------------- */
+.proto-notice {
+  margin: 20px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--idbi-orange);
+  border-radius: var(--radius);
+  background: var(--idbi-orange-light);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.proto-notice strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.idbi-disclaimer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 11px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.7);
+}
