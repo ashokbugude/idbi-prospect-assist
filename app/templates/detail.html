@@ -73,7 +73,7 @@
               <td class="num">{{ act.effort_minutes }}</td>
               <td class="num">{{ act.expected_conversion_delta_pp }}</td>
               <td class="num">₹{{ "{:,}".format(act.expected_value_inr) }}</td>
-              <td><code>{{ act.evidence }}</code></td>
+              <td>{{ act.evidence }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -217,8 +217,7 @@
       </div>
 
       <p class="section-note">
-        {{ uplift.method }}<br />{{ uplift.disclaimer }}<br />
-        Machine-readable: <a href="/api/customer/{{ customer.customer_id }}/uplift">/api/customer/{{ customer.customer_id }}/uplift</a>
+        {{ uplift.method }}<br />{{ uplift.disclaimer }}
       </p>
     </section>
     {% endif %}
@@ -275,7 +274,7 @@
       </div>
       <p class="section-note">
         Each simulation is written to the decision audit log, so a what-if an RM showed a customer is
-        reconstructable later. API: <code>POST /api/customer/{{ customer.customer_id }}/simulate</code>
+        reconstructable later.
       </p>
     </section>
 

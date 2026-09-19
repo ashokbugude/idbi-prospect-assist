@@ -306,11 +306,10 @@ def build_outcome_report() -> dict[str, Any]:
             for c, l, ct, cv, d in DISPOSITIONS
         ],
         "method": (
-            "Append-only JSONL. A correction is a new record that supersedes the previous one for "
+            "Append-only log. A correction is a new record that supersedes the previous one for "
             "that customer, so the audit trail is never rewritten. Conversion denominators count "
             "contacted leads only — an unreachable lead is not a failed pitch."
         ),
-        "storage_path": _display_path(OUTCOME_LOG),
     }
 
 

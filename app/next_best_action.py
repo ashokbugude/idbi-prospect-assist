@@ -217,14 +217,14 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             f"Quality Lead (score {profile.get('composite_lead_score')}) with pre-qualified EMI capacity of ₹{emi:,}/mo.",
             f"“{name}, based on your account relationship you're pre-assessed for a {product} "
             f"with an EMI around ₹{emi:,}. Shall I hold a slot to complete it this week?”",
-            "scoring.py → assign_lead_tier() + repayment capacity gate",
+            "Lead tiering rules — repayment capacity gate",
         ))
         actions.append(_make(
             profile, "underwriter_prep", "Pre-build underwriter packet", "Underwriter desk", "Ops",
             "Governance", 24,
             "Explainability pack ready before the call shortens sanction cycle time.",
             "Attach the generated PDF (reasons, bureau view, income inference) to the lead record.",
-            "/api/customer/{id}/underwriter-pdf",
+            "Underwriter packet",
             compliance_note="Human-in-loop: packet supports an underwriter decision, never replaces it.",
         ))
     elif tier == "Serious":
@@ -234,7 +234,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             f"Serious lead — capacity confirmed (₹{emi:,}/mo) but the digital journey is incomplete.",
             f"“{name}, I can co-browse the {product} application with you — it takes about 10 minutes "
             "and I'll confirm your eligibility live.”",
-            "scoring.py → Serious tier gate (composite ≥62)",
+            "Lead tiering rules — Serious gate (composite 62+)",
         ))
     elif tier == "Interested":
         actions.append(_make(
@@ -242,7 +242,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             "Nurture", None,
             "Capacity or intent not yet sufficient for RM time — nurture until a trigger fires.",
             f"Send the {product} explainer + EMI calculator link; escalate on calculator use.",
-            "scoring.py → Interested tier (composite 38–62)",
+            "Lead tiering rules — Interested band (composite 38–62)",
         ))
     else:  # Window-shop Risk
         actions.append(_make(
@@ -250,7 +250,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             "Protect capacity", None,
             "Browsing-heavy, commitment-light pattern. Calling this lead is the ~1% conversion trap.",
             "No sales contact. Lead stays visible to the RM for context only.",
-            "scoring.py → window_shopping_flag override",
+            "Window-shopping override",
             compliance_note="Suppression is a prioritisation decision, not a credit rejection. No adverse credit action is recorded.",
             minutes_saved=SUPPRESSED_CALL_MINUTES,
         ))
@@ -259,7 +259,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             "Nurture", None,
             "Keeps the relationship warm at zero RM cost while discipline signals mature.",
             "Enrol in the budgeting / credit-health drip. Re-evaluate on the next scoring run.",
-            "rm_brief.py → deprioritization brief",
+            "Deprioritisation brief",
         ))
 
     # ---------------- uplift-grounded actions ----------------
@@ -273,7 +273,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             f"Income held at other banks is invisible to IDBI today.{moves}",
             f"“{name}, if you share your other bank statements through the RBI Account Aggregator — "
             "it's a one-tap consent, we never see your login — I can often improve the eligibility we can offer.”",
-            "uplift.py → aa_consent lever (real re-score)" if aa_delta else "account_aggregator.py",
+            "Uplift simulator — measured re-score" if aa_delta else "Account Aggregator flow",
             compliance_note="Explicit, revocable, purpose-limited consent under the AA framework and DPDP Act, 2023.",
             delta_pp=aa_delta,
         ))
@@ -286,7 +286,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             "Capacity and intent both clear the gate but no application exists — the highest-value gap in the book."
             + (f" Simulation: {app_lever['delta_points']:+.1f} composite points." if app_lever else ""),
             "Offer to complete the application on the call; pre-fill from the existing KYC record.",
-            "uplift.py → start_application lever" if app_lever else "scoring.py → purchase intent",
+            "Uplift simulator — measured re-score" if app_lever else "Purchase intent model",
             delta_pp=_lever_delta_pp(profile, app_lever),
         ))
 
@@ -298,7 +298,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             "Calculator usage is the cheapest measurable intent signal available."
             + (f" Simulation: {calc_lever['delta_points']:+.1f} composite points." if calc_lever else ""),
             f"Send a pre-filled {product} EMI link at ₹{emi:,}/mo and ask which tenor suits them.",
-            "uplift.py → emi_calculator lever" if calc_lever else "scoring.py → purchase intent",
+            "Uplift simulator — measured re-score" if calc_lever else "Purchase intent model",
         ))
 
     dti_lever = _lever(uplift, "close_one_emi")
@@ -309,7 +309,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             f"DTI at {_num(raw.get('debt_to_income_ratio')):.0%} is the binding constraint."
             + (f" Retiring one obligation is worth {dti_lever['delta_points']:+.1f} points." if dti_lever else ""),
             "Position a balance transfer that retires a costlier external EMI — improves eligibility and wins the asset.",
-            "uplift.py → close_one_emi lever" if dti_lever else "scoring.py → repayment capacity",
+            "Uplift simulator — measured re-score" if dti_lever else "Repayment capacity model",
             delta_pp=_lever_delta_pp(profile, dti_lever),
         ))
 
@@ -321,7 +321,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             "Routing salary to IDBI makes income directly observable and deepens the liability relationship."
             + f" Simulation: {salary_lever['delta_points']:+.1f} composite points.",
             "“Moving your salary credit to IDBI unlocks better pricing and speeds up any future loan approval.”",
-            "uplift.py → salary_routing lever",
+            "Uplift simulator — measured re-score",
         ))
 
     # ---------------- risk overlays ----------------
@@ -332,7 +332,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             f"Delinquency score {delinq.get('score')} ({delinq.get('risk_band')}). "
             + (delinq.get("reasons") or ["Forward-looking stress signal."])[0],
             f"Size to ≤₹{int(emi * 0.7):,}/mo and document the rationale in the packet.",
-            "enrichment.py → score_delinquency_risk()",
+            "Delinquency risk model",
             compliance_note="Risk-based pricing/sizing — must be recorded with reasons for audit.",
         ))
 
@@ -342,7 +342,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             "Risk control", 72,
             f"Bureau normalized {bureau.get('normalized_score')}/100 — unsecured pricing will not clear underwriting.",
             "Lead with a secured/collateral-backed option instead of the unsecured top match.",
-            "bureau.py → underwriting_hint",
+            "Bureau assessment",
         ))
 
     if tier in ("Interested", "Window-shop Risk"):
@@ -351,7 +351,7 @@ def build_next_best_actions(profile: dict, raw: dict, uplift: dict | None = None
             "Nurture", None,
             "Behavioural signals are monthly; a fresh salary cycle can change the tier without any RM cost.",
             "Schedule re-scoring; alert the RM only on a tier upgrade.",
-            "dataset_store.py → scheduled re-score",
+            "Scheduled re-scoring",
         ))
 
     if tier == "Window-shop Risk":

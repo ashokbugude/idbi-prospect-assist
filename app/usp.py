@@ -37,7 +37,7 @@ USPS: list[tuple[str, str, str, str, str, str, str, str, bool]] = [
      "treating turnover as income.",
      "A large share of IDBI's liability base is not salaried. Treating a trader's turnover as income "
      "is the fastest route to a bad book.",
-     "config.py → SELF_EMPLOYED_MARGINS", "/customer/IDBI-L10010",
+     "Customer detail → Income Inference", "/customer/IDBI-L10010",
      "Scores everyone on a single salaried assumption.", False),
 
     ("multi-bank", "Signal depth",
@@ -73,7 +73,7 @@ USPS: list[tuple[str, str, str, str, str, str, str, str, bool]] = [
      "forward-looking delinquency score.",
      "It is observable today, on existing CASA data, for every salaried customer — no new data "
      "collection required to start.",
-     "salary_day_spend_ratio → delinquency model", "/customer/IDBI-L10010",
+     "Day-1 spend → delinquency model", "/customer/IDBI-L10010",
      "Waits for a bureau delinquency flag, which arrives after the damage.", False),
 
     ("delinquency-4th", "Signal depth",
@@ -396,7 +396,7 @@ USPS: list[tuple[str, str, str, str, str, str, str, str, bool]] = [
      "determinism, ML guardrails and the AA uplift path.",
      "Reproducibility is the precondition for auditability — the same record must always produce the "
      "same tier.",
-     "tests/ · validate.py", "/ml",
+     "Automated regression suite", "/ml",
      "Regenerates data per run, so results move between demos.", False),
 
     ("glossary", "Engineering credibility",
@@ -414,7 +414,7 @@ USPS: list[tuple[str, str, str, str, str, str, str, str, bool]] = [
      "Every stated requirement from the AMA is mapped to the module that implements it and the page that "
      "demonstrates it.",
      "It lets a reviewer check coverage in two minutes instead of hunting through the app.",
-     "AMA alignment matrix", "/usps",
+     "Requirement traceability matrix", "/usps",
      "Describes features without mapping them to the brief.", False),
 ]
 

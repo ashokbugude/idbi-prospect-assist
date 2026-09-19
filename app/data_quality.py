@@ -80,7 +80,7 @@ FIELD_GROUPS: dict[str, dict[str, Any]] = {
         "required": ["customer_id", "monthly_income", "employment_type", "city", "age"],
         "optional": ["business_type", "relationship_years", "segment"],
         "degradation": (
-            "customer_id and monthly_income are hard requirements — a record missing "
+            "Customer ID and stated monthly income are hard requirements — a record missing "
             "either is rejected at ingest rather than scored on defaults."
         ),
     },
@@ -103,6 +103,45 @@ RANGE_RULES: dict[str, tuple[float, float]] = {
 }
 
 CRITICAL_FIELDS = {"customer_id", "monthly_income"}
+
+# Business labels for every contract field, so the page reads as an integration
+# checklist rather than a database schema.
+FIELD_LABELS: dict[str, str] = {
+    "monthly_credit_inflow": "Monthly credit inflow",
+    "avg_monthly_balance": "Average monthly balance",
+    "need_spend_ratio": "Essential spend share",
+    "luxury_spend_ratio": "Luxury spend share",
+    "savings_transfer_ratio": "Savings transfer share",
+    "salary_day_spend_ratio": "Day-1 salary spend",
+    "debt_to_income_ratio": "Debt-to-income ratio",
+    "estimated_monthly_disposable": "Estimated disposable income",
+    "monthly_commute_spend": "Monthly commute spend",
+    "multi_bank_income_share": "Income share at other banks",
+    "upi_retail_transactions": "UPI retail transaction count",
+    "credit_score_band": "Bureau band",
+    "bureau_enquiries_90d": "Bureau enquiries (90 days)",
+    "active_credit_accounts": "Active credit accounts",
+    "credit_utilization_pct": "Credit utilisation",
+    "bureau_repayment_history_months": "Repayment history (months)",
+    "loan_page_visits_30d": "Loan page visits (30 days)",
+    "loan_calculator_uses": "EMI calculator uses",
+    "avg_session_minutes": "Average session length",
+    "application_started": "Application started",
+    "window_shopping_flag": "Window-shopping pattern",
+    "has_other_bank_accounts": "Other bank accounts held",
+    "customer_id": "Customer ID",
+    "monthly_income": "Stated monthly income",
+    "employment_type": "Employment type",
+    "city": "City",
+    "age": "Age",
+    "business_type": "Business type",
+    "relationship_years": "Relationship tenure",
+    "segment": "Customer segment",
+}
+
+
+def field_label(field: str) -> str:
+    return FIELD_LABELS.get(field, field.replace("_", " ").capitalize())
 
 
 def _field_stats(customers: list[dict], field: str) -> dict[str, Any]:
@@ -131,6 +170,7 @@ def _field_stats(customers: list[dict], field: str) -> dict[str, Any]:
 
     return {
         "field": field,
+        "label": field_label(field),
         "present_pct": round(present / n * 100, 1),
         "missing_pct": round(nulls / n * 100, 1),
         "zero_pct": round(zeros / n * 100, 1),
@@ -280,11 +320,11 @@ def build_data_quality_report(customers: list[dict], baseline: list[dict] | None
             "through the production rule engine — the churn shown is what would actually happen."
         ),
         "ingest_rules": [
-            ("customer_id, monthly_income", "Hard reject at ingest — never scored on a default. Enforced by ingest.validate_customer()."),
+            ("Customer ID and stated monthly income", "Hard reject at ingest — never scored on a default."),
             ("Numbers sent as strings", "Coerced (\"1,25,000\" and \"85000\" both parse); unparseable values are dropped, not zeroed."),
-            ("null instead of an absent key", "Treated as absent so the scorer's unknown handling applies."),
+            ("An empty value instead of a missing field", "Treated as absent so the scorer's unknown handling applies."),
             ("Negative amounts", "Floored to zero and flagged — a negative income must never outscore a zero one."),
-            ("Ratio fields outside 0–1", "Clamped and flagged; the record is scored but marked for review."),
+            ("Share and ratio fields outside their range", "Clamped and flagged; the record is scored but marked for review."),
             ("Bureau group absent", "Neutral contribution, routed to manual underwriter review."),
             ("Digital group absent", "Intent scored from transactions only — no penalty for branch-acquired customers."),
             ("AA declined", "Single-bank view. Declining consent lowers the ceiling, never the score."),

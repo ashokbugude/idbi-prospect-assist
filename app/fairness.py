@@ -49,7 +49,7 @@ _PROHIBITED_TOKENS = (
 # Features that are legitimate but could proxy a protected attribute.
 PROXY_REGISTER = [
     {
-        "feature": "age",
+        "feature": "Age",
         "used": True,
         "proxy_for": "Age (protected in several fair-lending regimes)",
         "why_used": "Tenor feasibility — a 25-year home loan must mature before retirement.",
@@ -58,7 +58,7 @@ PROXY_REGISTER = [
         "monitored": True,
     },
     {
-        "feature": "employment_ordinal (salaried / self-employed / gig)",
+        "feature": "Employment type (salaried / self-employed / gig)",
         "used": True,
         "proxy_for": "Informal-sector and younger workers",
         "why_used": "Income volatility is a genuine repayment risk and is sized for, not penalised.",
@@ -67,7 +67,7 @@ PROXY_REGISTER = [
         "monitored": True,
     },
     {
-        "feature": "city (metro bonus in geo stability)",
+        "feature": "City (metro weighting in geo stability)",
         "used": False,
         "proxy_for": "Geography — the classic redlining vector",
         "why_used": "Metro presence is used only as a stability signal, not a scoring input.",
@@ -76,7 +76,7 @@ PROXY_REGISTER = [
         "monitored": True,
     },
     {
-        "feature": "monthly_income / disposable income",
+        "feature": "Income and disposable cashflow",
         "used": True,
         "proxy_for": "Socio-economic status",
         "why_used": "Repayment capacity is the lawful basis of the assessment.",
@@ -85,7 +85,7 @@ PROXY_REGISTER = [
         "monitored": True,
     },
     {
-        "feature": "upi_*_share (merchant categories)",
+        "feature": "UPI merchant-category mix",
         "used": True,
         "proxy_for": "Lifestyle, and indirectly diet/religion via merchant type",
         "why_used": "Spend mix is a discipline signal required by the Track 02 brief.",
@@ -111,7 +111,7 @@ DATA_INVENTORY = [
         "purpose": "Holistic income view where income sits outside IDBI",
         "lawful_basis": "Explicit, revocable, purpose-limited AA consent artefact",
         "retention": "Consent validity window (30 days), then derived figure only",
-        "minimisation": "Only inflow aggregates are pulled — DEPOSIT / RECURRING_DEPOSIT scope",
+        "minimisation": "Only inflow aggregates are pulled — deposit and recurring-deposit scope only",
     },
     {
         "category": "Bureau data",
@@ -281,9 +281,9 @@ def audit_prohibited_attributes(customers: list[dict]) -> dict:
         "prohibited_fields_in_record": offending_fields,
         "passed": not offending_features,
         "note": (
-            "Checked programmatically against FEATURE_NAMES on every page load. "
-            "'name' exists on the customer record for RM display and is deliberately "
-            "absent from the feature vector."
+            "Checked programmatically against the live model feature set on every page load. "
+            "The customer's name exists on the record for RM display and is deliberately "
+            "absent from the model's inputs."
         ),
         "attributes": [{"attribute": a, "treatment": t} for a, t in PROHIBITED_ATTRIBUTES],
     }
@@ -317,29 +317,29 @@ def governance_controls() -> list[dict]:
         {
             "control": "No automated credit decision",
             "detail": "The engine ranks and explains. Sanction authority stays with the underwriter.",
-            "evidence": "/architecture · every RM brief carries the human-in-loop disclaimer",
+            "evidence": "Architecture → compliance · every RM brief carries the human-in-loop disclaimer",
         },
         {
             "control": "Model nudge ceiling",
             "detail": "XGBoost may move a composite score by at most ±8 points and may never demote a Quality Lead.",
-            "evidence": "/api/ml/model-card → guardrails",
+            "evidence": "Model report → guardrails",
         },
         {
             "control": "Rules remain primary",
             "detail": "If the model is unavailable the service degrades to the deterministic rule engine "
                       "rather than failing — the tier a customer receives is always reproducible.",
-            "evidence": "scoring.py → score_customer() fallback path",
+            "evidence": "Customer detail → scoring-mode badge",
         },
         {
             "control": "Deterministic reproducibility",
             "detail": "Fixed seed, versioned model artefact and pure-function scoring — the same record "
                       "always yields the same tier, which is what makes an audit possible.",
-            "evidence": "tests/test_scoring.py → test_ranking_is_deterministic",
+            "evidence": "Automated regression suite",
         },
         {
             "control": "Consent artefact per external pull",
             "detail": "Multi-bank data is only fetched against an explicit, time-boxed AA consent id.",
-            "evidence": "/multi-bank · POST /api/aa/consent",
+            "evidence": "Multi-bank → consent flow",
         },
         {
             "control": "Purpose limitation",
@@ -350,7 +350,7 @@ def governance_controls() -> list[dict]:
         {
             "control": "Access control",
             "detail": "RM session gate on all customer views; maps to IDBI SSO/LDAP in production.",
-            "evidence": "auth.py · /login",
+            "evidence": "RM sign-in",
         },
     ]
 
@@ -384,7 +384,7 @@ MITIGATION_ACTIONS = {
     "Employment type": [
         "Offer Account Aggregator consent first to every gig and self-employed lead — their income "
         "is the most likely to sit outside IDBI (simulated below).",
-        "Keep the self-employed industry-margin model (config.SELF_EMPLOYED_MARGINS) under "
+        "Keep the self-employed industry-margin model under "
         "quarterly review against realised repayment.",
         "Track approval *and* realised delinquency by employment type in the pilot, so the risk "
         "premium can be justified or removed with evidence.",

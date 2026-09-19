@@ -133,7 +133,9 @@ def test_nba_uses_real_rescore_when_uplift_supplied():
             continue
         nba = build_next_best_actions(profile, raw, uplift)
         action = next(a for a in nba["actions"] if a["code"] == "aa_consent_request")
-        assert "real re-score" in action["evidence"] or "uplift.py" in action["evidence"]
+        # A grounded delta is labelled as measured; an assumed one is not.
+        assert "measured re-score" in action["evidence"], action["evidence"]
+        assert action["expected_conversion_delta_pp"] > 0
         return
     pytest.skip("no AA-moving lead in this dataset slice")
 

@@ -219,7 +219,6 @@ def build_audit_report(limit: int = 40) -> dict[str, Any]:
         "recent": list(reversed(rows))[:limit],
         "engine_version": APP_VERSION,
         "model_version": _model_version(),
-        "storage_path": _display_path(AUDIT_LOG),
         "properties": [
             ("Append-only", "No entry is ever updated or deleted; a correction is a new entry."),
             ("Versioned", "Every entry carries the engine and model version that produced it."),

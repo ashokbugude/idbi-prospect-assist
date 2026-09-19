@@ -73,14 +73,14 @@
     <span class="pill pill-{{ 'pass' if g.status == 'pass' else 'watch' if g.status == 'warn' else 'review' }}">{{ g.status }}</span>
     <span class="pill pill-muted">{{ g.required_completeness_pct }}% complete</span>
   </h3>
-  <p class="section-note"><code>{{ g.endpoint }}</code></p>
+  <p class="section-note">Source: {{ g.endpoint }}</p>
   <div class="table-wrap">
     <table class="data-table">
       <thead><tr><th>Field</th><th>Requirement</th><th class="num">Present</th><th class="num">Missing</th><th class="num">Out of range</th><th>Range rule</th><th>Status</th></tr></thead>
       <tbody>
         {% for f in g.required_fields %}
         <tr>
-          <td><code>{{ f.field }}</code>{% if f.critical %} <span class="pill pill-review">critical</span>{% endif %}</td>
+          <td><strong>{{ f.label }}</strong>{% if f.critical %} <span class="pill pill-review">required</span>{% endif %}</td>
           <td>Required</td>
           <td class="num">{{ f.present_pct }}%</td>
           <td class="num">{{ f.missing_pct }}%</td>
@@ -91,7 +91,7 @@
         {% endfor %}
         {% for f in g.optional_fields %}
         <tr>
-          <td><code>{{ f.field }}</code></td>
+          <td>{{ f.label }}</td>
           <td>Optional</td>
           <td class="num">{{ f.present_pct }}%</td>
           <td class="num">{{ f.missing_pct }}%</td>

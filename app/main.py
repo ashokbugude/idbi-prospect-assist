@@ -543,7 +543,7 @@ async def api_record_outcome(
 ):
     """Capture an RM call disposition — the label the next model trains on."""
     from app import audit
-    from app.outcomes import record_outcome
+    from app.outcomes import DISPOSITION_INDEX, record_outcome
 
     raw = _find_customer(customer_id)
     if not raw:
@@ -567,7 +567,9 @@ async def api_record_outcome(
         "outcome_recorded",
         actor=rm_id,
         customer_id=customer_id,
-        summary=f"{profile['lead_tier']} → {disposition}",
+        summary=f"{profile['lead_tier']} → {DISPOSITION_INDEX[disposition][1]}"
+        if disposition in DISPOSITION_INDEX
+        else f"{profile['lead_tier']} → {disposition}",
         outputs={"disposition": disposition, "converted": record["converted"]},
     )
     return {"recorded": record, "report": get_outcome_report()}

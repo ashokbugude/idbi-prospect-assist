@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from app.data_generator import generate_dataset
@@ -389,3 +391,88 @@ def test_the_live_population_passes_the_ingest_gate():
     assert report["accepted"] == 200
     assert report["rejected"] == 0
     assert report["records_needing_coercion"] == 0
+
+
+# --------------------------------------------------------------------------- #
+# The UI must not expose implementation detail
+# --------------------------------------------------------------------------- #
+CODE_PATTERNS = [
+    (r"\b[A-Za-z_][A-Za-z0-9_]*\.py\b", "a source filename"),
+    (r"\b[a-z_][a-z0-9_]{3,}\(\)", "a function name"),
+    (r"\b[A-Z][A-Z0-9]{3,}_[A-Z0-9_]+\b", "a constant name"),
+    (r"\.jsonl\b|\.joblib\b", "a storage file"),
+]
+
+# Raw contract field names are allowed only where they are the integration
+# contract itself; everywhere else a business label must be used.
+def _assert_no_code(text: str, where: str) -> None:
+    for pattern, what in CODE_PATTERNS:
+        found = re.findall(pattern, text)
+        assert not found, f"{where} exposes {what}: {sorted(set(found))[:5]}"
+
+
+def test_next_best_action_evidence_is_business_language():
+    from app.next_best_action import build_next_best_actions
+
+    data = generate_dataset(60, seed=42)
+    for raw in data:
+        profile = score_customer_rules(raw)
+        for action in build_next_best_actions(profile, raw)["actions"]:
+            _assert_no_code(action["evidence"], "an action's evidence label")
+            _assert_no_code(action["rationale"], "an action's rationale")
+            _assert_no_code(action["script"], "an RM call script")
+
+
+def test_usp_catalogue_is_business_language():
+    from app.usp import build_usp_catalogue
+
+    for usp in build_usp_catalogue()["entries"]:
+        for field in ("title", "claim", "why_idbi", "evidence_label", "typical_entry"):
+            _assert_no_code(usp[field], f"USP '{usp['id']}' field {field}")
+
+
+def test_glossary_never_points_at_source_files():
+    from app.glossary import build_glossary
+
+    for entry in build_glossary()["entries"]:
+        _assert_no_code(entry["where"], f"glossary term '{entry['term']}'")
+        _assert_no_code(entry["definition"], f"glossary definition '{entry['term']}'")
+
+
+def test_governance_surfaces_are_business_language():
+    from app.fairness import PROXY_REGISTER, DATA_INVENTORY, governance_controls
+
+    for control in governance_controls():
+        _assert_no_code(control["evidence"], "a governance control")
+        _assert_no_code(control["detail"], "a governance control detail")
+    for proxy in PROXY_REGISTER:
+        _assert_no_code(proxy["feature"], "the proxy register")
+        _assert_no_code(proxy["mitigation"], "a proxy mitigation")
+    for row in DATA_INVENTORY:
+        _assert_no_code(row["minimisation"], "the data inventory")
+
+
+def test_data_quality_fields_carry_business_labels():
+    from app.data_quality import build_data_quality_report
+
+    data = generate_dataset(60, seed=42)
+    report = build_data_quality_report(data, [score_customer_rules(c) for c in data])
+    for group in report["groups"]:
+        for row in group["required_fields"] + group["optional_fields"]:
+            assert row["label"] and row["label"] != row["field"], (
+                f"{row['field']} has no business label"
+            )
+    for rule in report["ingest_rules"]:
+        _assert_no_code(rule[0], "an ingest rule")
+        _assert_no_code(rule[1], "an ingest rule description")
+
+
+def test_uplift_copy_is_business_language(quality_customer):
+    from app.uplift import simulate_uplift
+
+    report = simulate_uplift(quality_customer)
+    _assert_no_code(report["method"], "the uplift method note")
+    _assert_no_code(report["disclaimer"], "the uplift disclaimer")
+    for lever in report["levers"]:
+        _assert_no_code(lever["label"], "an uplift lever label")
+        _assert_no_code(lever["note"], "an uplift lever note")

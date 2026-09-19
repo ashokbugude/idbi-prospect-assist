@@ -492,7 +492,7 @@ def simulate_uplift(raw: dict, base_profile: dict | None = None) -> dict:
         },
         "method": (
             "Each row is a real re-score: the raw customer record is copied, the lever is applied, "
-            "and the identical deterministic rule engine (scoring.py) is re-run. No ML, no estimation — "
+            "and the identical deterministic rule engine is re-run. No ML, no estimation — "
             "the delta shown is exactly what the production scorer would output."
         ),
         "disclaimer": (
