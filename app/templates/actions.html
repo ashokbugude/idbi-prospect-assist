@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Next Best Action — IDBI Prospect Assist AI{% endblock %}
+
+{% block content %}
+{% set cp = portfolio.capacity_plan %}
+<div class="page-hero">
+  <span class="badge">RM Operating Plan</span>
+  <h1>Next Best Action</h1>
+  <p class="subtitle">
+    A lead score tells an RM <em>who</em> to call. This page tells the branch <em>what to do today</em> —
+    every action costed in RM minutes and expected rupees, then packed into the capacity that actually exists.
+  </p>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="value">{{ cp.actions_scheduled }}</div>
+    <div class="label">Actions scheduled today</div>
+    <div class="sub">{{ cp.actions_deferred }} deferred to tomorrow</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ cp.utilisation_pct }}%</div>
+    <div class="label">RM capacity used</div>
+    <div class="capacity-bar"><span style="width: {{ [cp.utilisation_pct, 100]|min }}%"></span></div>
+    <div class="sub">{{ cp.minutes_scheduled }} of {{ cp.total_minutes_available }} min · {{ cp.rm_count }} RMs</div>
+  </div>
+  <div class="kpi">
+    <div class="value">₹{{ "{:,}".format((cp.scheduled_value_inr / 100000)|round(1)) }}L</div>
+    <div class="label">Expected value scheduled</div>
+    <div class="sub">{{ cp.value_captured_pct }}% of the day's addressable pipeline</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ portfolio.rm_hours_saved_by_suppression }} h</div>
+    <div class="label">RM hours recovered</div>
+    <div class="sub">{{ portfolio.suppressed_leads }} window-shop leads suppressed</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ portfolio.sla_commitments }}</div>
+    <div class="label">24h SLA commitments</div>
+    <div class="sub">Scheduled before any discretionary work</div>
+  </div>
+</div>
+
+<section class="panel-section">
+  <h2>Branch playbook — every action across {{ portfolio.total_leads }} leads</h2>
+  <p class="section-lead">
+    Grouped by action type. "RM minutes" is the human time the action consumes; automated nurture and
+    suppression consume none, which is exactly why they belong in the plan.
+  </p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Action</th><th>Channel</th><th>Owner</th><th>SLA</th>
+          <th class="num">Leads</th><th class="num">RM minutes</th>
+          <th class="num">RM minutes saved</th><th class="num">Expected value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in portfolio.playbook %}
+        <tr>
+          <td><strong>{{ row.title }}</strong><br /><span class="pill pill-muted">{{ row.category }}</span></td>
+          <td>{{ row.channel }}</td>
+          <td>{{ row.owner }}</td>
+          <td>{% if row.sla_hours %}{{ row.sla_hours }}h{% else %}—{% endif %}</td>
+          <td class="num">{{ row.leads }}</td>
+          <td class="num">{{ row.rm_minutes }}</td>
+          <td class="num">{% if row.rm_minutes_saved %}+{{ row.rm_minutes_saved }}{% else %}—{% endif %}</td>
+          <td class="num">{% if row.expected_value_inr %}₹{{ "{:,}".format(row.expected_value_inr) }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel-section">
+  <h2>Today's queue — in execution order</h2>
+  <p class="section-lead">
+    24-hour SLA commitments first, then packed by expected rupees per RM minute until the branch runs out
+    of capacity. Showing the top {{ portfolio.today_queue|length }} of {{ cp.actions_scheduled }} scheduled.
+  </p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th><th>Customer</th><th>Tier</th><th class="num">Score</th>
+          <th>Next best action</th><th>Channel</th>
+          <th class="num">Min</th><th class="num">+pp</th>
+          <th class="num">Expected ₹</th><th class="num">₹ / RM min</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in portfolio.today_queue %}
+        {% set a = item.action %}
+        <tr>
+          <td class="num">{{ loop.index }}</td>
+          <td><a class="customer-link" href="/customer/{{ item.customer_id }}">{{ item.name }}</a><br />
+              <small>{{ item.customer_id }}</small></td>
+          <td><span class="tier {{ item.lead_tier_css }}">{{ item.lead_tier }}</span></td>
+          <td class="num">{{ item.composite_lead_score }}</td>
+          <td>{{ a.title }}</td>
+          <td>{{ a.channel }}{% if a.sla_hours %}<br /><small>SLA {{ a.sla_hours }}h</small>{% endif %}</td>
+          <td class="num">{{ a.effort_minutes }}</td>
+          <td class="num">{{ a.expected_conversion_delta_pp }}</td>
+          <td class="num">₹{{ "{:,}".format(a.expected_value_inr) }}</td>
+          <td class="num">₹{{ "{:,}".format(a.value_per_rm_minute) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel-section">
+  <h2>How these numbers are produced</h2>
+  <p>{{ portfolio.method }}</p>
+  <ul class="reasons methodology-list">
+    <li><strong>Indicative ticket:</strong> affordable EMI × product tenor × 0.72 interest discount — personalised
+      per lead rather than a flat blended ticket size.</li>
+    <li><strong>Expected value:</strong> conversion delta (percentage points) × indicative ticket.</li>
+    <li><strong>Grounded deltas:</strong> where an action maps to an uplift lever — Account Aggregator consent,
+      application assist, obligation relief — the delta comes from an actual re-score through the production
+      rule engine, not an assumed lift.</li>
+    <li><strong>Assumed deltas:</strong> the remainder use documented relative-lift assumptions on the lead's tier
+      base conversion rate. These are calibration targets for the 4-week RM A/B pilot, not measured outcomes.</li>
+    <li><strong>Suppression:</strong> Window-shop Risk leads are removed from outbound calling and return
+      12 RM minutes each. No adverse credit action is recorded — this is contact prioritisation only.</li>
+  </ul>
+  <p class="section-note">
+    Machine-readable: <a href="/api/next-best-action">/api/next-best-action</a> ·
+    per lead <a href="/api/customer/IDBI-L10010/next-best-action">/api/customer/{id}/next-best-action</a>
+  </p>
+</section>
+{% endblock %}

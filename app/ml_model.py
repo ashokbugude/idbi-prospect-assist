@@ -271,10 +271,15 @@ def blend_with_rules(
     final_composite = round(_clamp(rule_composite + nudge), 1)
     final_tier = _safe_tier_fusion(rule_tier, ml_tier, ml_prob, ml_conf, customer)
 
-    # Quality guard: blended score must not exceed rule by more than nudge allows
+    # Score floor: the blend must never reduce a Quality/Serious lead's score.
     if final_composite < rule_composite and rule_tier in ("Quality Lead", "Serious"):
         final_composite = rule_composite
-        final_tier = rule_tier
+        # Restore the tier too — unless the fusion made a deliberate,
+        # evidence-backed risk downgrade. This line previously reverted the
+        # window-shopping catch as well, which made that branch unreachable for
+        # every Serious lead and pinned the reported detection lift at 0%.
+        if not _is_risk_downgrade(rule_tier, final_tier, customer):
+            final_tier = rule_tier
 
     ml_reasons = ml.get("ml_reasons", [])
     combined_reasons = rule_profile["purchase_intent"]["reasons"][:2] + ml_reasons[:2]
@@ -311,8 +316,17 @@ def _tier_css(tier: str) -> str:
 
 
 def _action_for_tier(tier: str, product: str) -> str:
-    from app.scoring import PRODUCT_LABELS, _recommended_action
+    from app.scoring import _recommended_action
     return _recommended_action(tier, product)
+
+
+def _is_risk_downgrade(rule_tier: str, final_tier: str, customer: dict) -> bool:
+    """True when the tier move is the explicit window-shopping catch, not noise."""
+    return (
+        final_tier == "Window-shop Risk"
+        and rule_tier in ("Interested", "Serious")
+        and bool(customer.get("window_shopping_flag"))
+    )
 
 
 def _safe_tier_fusion(

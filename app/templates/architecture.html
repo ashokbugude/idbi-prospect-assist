@@ -18,19 +18,19 @@
         ▼
 ┌───────────────────┐     ┌────────────────────┐
 │  Enrichment Layer │────▶│ Income inference   │  credit inflow, multi-bank uplift
-│  (enrichment.py)  │     │ Delinquency risk   │  day-1 spend, DTI, bureau band
+│                   │     │ Delinquency risk   │  day-1 spend, DTI, bureau band
 └─────────┬─────────┘     │ Geo stability      │  city + UPI geolocation
           │               └────────────────────┘
           ▼
 ┌───────────────────┐
 │  Rule Engine      │  Repayment · Intent · Discipline · 5 products
-│  (scoring.py)     │  EMI affordability gates · Lead tiers
+│                   │  EMI affordability gates · Lead tiers
 └─────────┬─────────┘
           │
           ▼
 ┌───────────────────┐     ┌────────────────────┐
 │  XGBoost Hybrid   │────▶│ ±8 pt safe nudge   │  Never demotes Quality Leads
-│  (ml_model.py)    │     │ Tier classifier    │  {{ feature_count }} features
+│                   │     │ Tier classifier    │  {{ feature_count }} features
 └─────────┬─────────┘     └────────────────────┘
           │
           ▼

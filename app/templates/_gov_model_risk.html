@@ -1,0 +1,131 @@
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="value">{{ audit.total_entries }}</div>
+    <div class="label">Audit entries</div>
+    <div class="sub">{{ audit.leads_with_decision_record }} leads carry a decision record</div>
+  </div>
+  <div class="kpi">
+    <div class="value"><span class="pill pill-{{ 'pass' if drift.live.overall_band == 'stable' else 'watch' if drift.live.overall_band == 'moderate' else 'review' }}">{{ drift.live.overall_band|upper }}</span></div>
+    <div class="label">Population drift</div>
+    <div class="sub">Max PSI {{ drift.live.max_psi }} · {{ drift.live.flagged_count }} features flagged</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ audit.engine_version }}</div>
+    <div class="label">Engine version</div>
+    <div class="sub">Model: {{ audit.model_version }}</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ drift.alarm_scenario.flagged_count }}</div>
+    <div class="label">Alarms in stress test</div>
+    <div class="sub">Thresholds demonstrated firing, not asserted</div>
+  </div>
+</div>
+
+<section class="panel-section">
+  <h2>Decision audit log</h2>
+  <p class="section-lead">
+    Every consequential event with the inputs that produced it, the versions that were live, and the
+    reason codes the RM actually saw. Append-only — a correction is a new entry, never an edit.
+  </p>
+  <div class="detail-kv wide">
+    {% for p in audit.properties %}
+    <div><span>{{ p[0] }}</span><strong>{{ p[1] }}</strong></div>
+    {% endfor %}
+  </div>
+
+  <h3 style="margin-top:22px">Events captured</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Event</th><th class="num">Count</th></tr></thead>
+      <tbody>
+        {% for e in audit.entries_by_type %}
+        <tr><td>{{ e.label }}</td><td class="num">{{ e.count }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:22px">Most recent entries</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Time (UTC)</th><th>Event</th><th>Actor</th><th>Customer</th><th>Summary</th><th>Reason codes</th><th>Versions</th></tr></thead>
+      <tbody>
+        {% for r in audit.recent %}
+        <tr>
+          <td><small>{{ r.at }}</small></td>
+          <td>{{ r.event_label }}</td>
+          <td>{{ r.actor }}</td>
+          <td>{% if r.customer_id %}<a class="customer-link" href="/customer/{{ r.customer_id }}">{{ r.customer_id }}</a>{% else %}—{% endif %}</td>
+          <td>{{ r.summary }}</td>
+          <td>{% if r.reason_codes %}<ul class="reasons compact">{% for rc in r.reason_codes %}<li>{{ rc }}</li>{% endfor %}</ul>{% else %}—{% endif %}</td>
+          <td><small>{{ r.engine_version }} / {{ r.model_version }}</small></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="export-actions"><a class="page-btn" href="/api/audit/export">Download full audit log (CSV)</a></p>
+  <p class="section-note">The full log is available through the <a href="/api/audit">audit API</a> for the bank's own retention.</p>
+</section>
+
+<section class="panel-section">
+  <h2>Population drift (PSI)</h2>
+  <p class="section-lead">{{ drift.method }}</p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Band</th><th>Range</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for b in drift.bands %}
+        <tr><td><span class="pill pill-{{ 'pass' if b.band == 'stable' else 'watch' if b.band == 'moderate' else 'review' }}">{{ b.band }}</span></td>
+            <td>{{ b.range }}</td><td>{{ b.action }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:24px">Live population vs training distribution</h3>
+  <p class="section-note">Reference: {{ drift.reference_population }} · Current: {{ drift.current_population_size }} leads</p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Feature</th><th class="num">PSI</th><th>Band</th><th class="num">Reference mean</th><th class="num">Current mean</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for f in drift.live.features %}
+        <tr>
+          <td><strong>{{ f.label }}</strong></td>
+          <td class="num">{{ "%.4f"|format(f.psi) }}</td>
+          <td><span class="pill pill-{{ 'pass' if f.band == 'stable' else 'watch' if f.band == 'moderate' else 'review' }}">{{ f.band }}</span></td>
+          <td class="num">{{ f.reference_mean }}</td>
+          <td class="num">{{ f.current_mean }}</td>
+          <td><small>{{ f.action }}</small></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:24px">{{ drift.alarm_scenario.label }}</h3>
+  <div class="finding-card {{ 'review' if drift.alarm_scenario.retrain_recommended else '' }}">
+    <h4>A monitor nobody has seen alarm is not a monitor</h4>
+    <p>{{ drift.alarm_scenario.description }}</p>
+    <p><strong>Result:</strong> max PSI {{ drift.alarm_scenario.max_psi }} —
+      {{ drift.alarm_scenario.flagged_count }} features breach threshold, retrain
+      {{ "recommended" if drift.alarm_scenario.retrain_recommended else "not triggered" }}.</p>
+  </div>
+  <div class="table-wrap" style="margin-top:14px">
+    <table class="data-table">
+      <thead><tr><th>Feature</th><th class="num">PSI</th><th>Band</th><th class="num">Reference</th><th class="num">Shifted</th></tr></thead>
+      <tbody>
+        {% for f in drift.alarm_scenario.features[:8] %}
+        <tr>
+          <td>{{ f.label }}</td>
+          <td class="num">{{ "%.4f"|format(f.psi) }}</td>
+          <td><span class="pill pill-{{ 'pass' if f.band == 'stable' else 'watch' if f.band == 'moderate' else 'review' }}">{{ f.band }}</span></td>
+          <td class="num">{{ f.reference_mean }}</td>
+          <td class="num">{{ f.current_mean }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="section-note"><strong>Operating rule:</strong> {{ drift.operating_rule }}</p>
+</section>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import zlib
 from datetime import date, timedelta
 
 TXN_CATEGORIES = (
@@ -21,7 +22,12 @@ TXN_CATEGORIES = (
 
 def build_transaction_timeline(customer: dict, days: int = 30, seed: int | None = None) -> dict:
     """Build a tagged credit/debit timeline from customer behavioral profile."""
-    rng = random.Random(seed if seed is not None else hash(customer.get("customer_id", "")) % 2**32)
+    # zlib.crc32 is stable across processes; the builtin hash() of a str is salted
+    # per interpreter (PYTHONHASHSEED), which would regenerate a different timeline
+    # on every restart and break the reproducibility claim.
+    if seed is None:
+        seed = zlib.crc32(str(customer.get("customer_id", "")).encode("utf-8"))
+    rng = random.Random(seed)
     income = int(customer.get("monthly_income", 40000))
     need = float(customer.get("need_spend_ratio", 0.5))
     luxury = float(customer.get("luxury_spend_ratio", 0.15))
@@ -29,7 +35,9 @@ def build_transaction_timeline(customer: dict, days: int = 30, seed: int | None 
     day1_ratio = float(customer.get("salary_day_spend_ratio", 0.5))
     city = customer.get("city", "Mumbai")
 
-    start = date.today().replace(day=1) - timedelta(days=days)
+    # Trailing `days` window ending today — not the month-old window that
+    # date.today().replace(day=1) - days produced.
+    start = date.today() - timedelta(days=days)
     entries: list[dict] = []
 
     salary_day = rng.randint(1, 3)

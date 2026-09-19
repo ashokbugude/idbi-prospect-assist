@@ -38,8 +38,12 @@ def fetch_aa_statements(customer: dict, consent_id: str) -> dict:
         return {"error": "Invalid or expired AA consent", "status": "failed"}
 
     import random
+    import zlib
 
-    rng = random.Random(hash(consent_id) % 2**32)
+    # Seed from the customer, not the consent id: a consent id is fresh on every
+    # click, so seeding from it made the demo show a different holistic income
+    # (and composite score) each time the judge pressed the button.
+    rng = random.Random(zlib.crc32(str(customer.get("customer_id", "")).encode("utf-8")))
     stated = int(customer.get("monthly_income", 0))
     share = float(customer.get("multi_bank_income_share", 0.2))
     other_inflow = int(stated * share / max(1 - share, 0.1) * rng.uniform(0.9, 1.15))

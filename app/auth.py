@@ -29,6 +29,17 @@ def is_authenticated(request: Request) -> bool:
     return request.cookies.get(AUTH_COOKIE) == _TOKEN
 
 
+def rm_session_active(request: Request) -> bool:
+    """
+    True when the RM navigation should be shown.
+
+    Uses the signed session token rather than mere cookie presence, so a stale or
+    forged cookie does not reveal the RM surface. Honours DISABLE_RM_AUTH so local
+    and test runs still render the full navigation.
+    """
+    return DISABLE_AUTH or is_authenticated(request)
+
+
 def is_public_path(path: str) -> bool:
     return path == "/login" or any(path.startswith(p) for p in AUTH_EXEMPT_PREFIXES)
 

@@ -23,4 +23,21 @@ Maps IDBI orientation / AMA quotes to product features and demo paths.
 | Digital clickstream (browsing) | Session minutes, calculator, app_started on dashboard | `/` Digital Clickstream section |
 | GenAI for RM assistance | GenAI-ready brief + optional OpenAI | Customer detail RM brief |
 
+## Beyond the stated brief (v0.8.0)
+
+Added for the refinement round — not asked for, but what separates a scored list from a deployable system.
+
+| Capability | Implementation | Demo |
+|---|---|---|
+| What would make this lead convertible | `uplift.py` — 11 levers, each a real re-score | `/customer/IDBI-L10055` → Uplift Simulator |
+| Is this tier durable | Adverse-scenario stress test | Customer detail → Stress test |
+| What should the RM do, and is it worth the minute | `next_best_action.py` — ₹ per RM minute | `/actions` |
+| What should the branch do today | Capacity-packed day plan, SLA commitments first | `/actions` → today's queue |
+| Is the model fair | Four-fifths audit, live on every load | `/fairness` |
+| Does the bias mitigation work | AA lever re-run across the population, before/after DI | `/fairness` → mitigation simulation |
+| Are protected attributes really excluded | Verified against `FEATURE_NAMES` in code | `/fairness` → prohibited attributes |
+| DPDP evidence | Data inventory, lawful basis, retention, minimisation | `/fairness` → data inventory |
+| Why this entry over another | 34 USPs, each with a verifiable link | `/usps` |
+| Shared vocabulary for a mixed panel | 136-term glossary, tested against the codebase | `/glossary` |
+
 **Pilot ask (post-shortlist):** IDBI AWS sandbox + 4-week RM A/B on Quality vs control cohort.

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v={{ asset_version() }}" />
   <script>
   (function () {
     try {
@@ -22,24 +22,42 @@
 <body>
   <header class="idbi-header">
     <div class="idbi-header-inner">
-      <a class="idbi-brand" href="/">
+      {% set rm_signed_in = rm_session_active(request) %}
+      {% if rm_signed_in %}
+      <div class="idbi-brand-cluster">
+        <a class="idbi-brand" href="/">
+          <img src="/static/idbi-logo.svg" alt="IDBI Bank" class="idbi-logo" />
+          <span class="idbi-product-name">Prospect Assist AI</span>
+        </a>
+        <span class="rm-role-badge">RM Portal</span>
+      </div>
+      {% else %}
+      <span class="idbi-brand is-static">
         <img src="/static/idbi-logo.svg" alt="IDBI Bank" class="idbi-logo" />
         <span class="idbi-product-name">Prospect Assist AI</span>
-      </a>
+      </span>
+      {% endif %}
+      {% if rm_signed_in %}
       <nav class="idbi-nav">
-        {% if request.cookies.get('prospect_rm_session') %}
-        <span class="rm-role-badge">RM Portal</span>
-        {% endif %}
+        {# Ordered by how often an RM opens the page and how close it sits to the
+           job: daily work first, then the evidence a manager or reviewer needs,
+           then reference material that is read once. #}
         <a href="/" {% if active == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
-        <a href="/impact" {% if active == 'impact' %}class="active"{% endif %}>Impact</a>
-        <a href="/ml" {% if active == 'ml' %}class="active"{% endif %}>ML Report</a>
+        <a href="/actions" {% if active == 'actions' %}class="active"{% endif %}>Actions</a>
+        <a href="/outcomes" {% if active == 'outcomes' %}class="active"{% endif %}>Outcomes</a>
         <a href="/multi-bank" {% if active == 'multi-bank' %}class="active"{% endif %}>Multi-bank</a>
+        <a href="/impact" {% if active == 'impact' %}class="active"{% endif %}>Impact</a>
+        <a href="/governance" {% if active == 'governance' %}class="active"{% endif %}>Governance</a>
+        <a href="/ml" {% if active == 'ml' %}class="active"{% endif %}>Model</a>
         <a href="/architecture" {% if active == 'architecture' %}class="active"{% endif %}>Architecture</a>
+        <a href="/usps" {% if active == 'usps' %}class="active"{% endif %}>USPs</a>
+        <a href="/glossary" {% if active == 'glossary' %}class="active"{% endif %}>Glossary</a>
         <a href="/api/rm-queue/export" class="nav-cta">Export CSV</a>
-        {% if request.cookies.get('prospect_rm_session') %}
         <a href="/logout" class="nav-logout">Logout</a>
-        {% endif %}
       </nav>
+      {% else %}
+      <span class="idbi-nav-locked">Authorised RM access only</span>
+      {% endif %}
     </div>
   </header>
 
@@ -79,7 +97,7 @@
     }
   })();
   </script>
-  <script src="/static/nav.js" defer></script>
+  <script src="/static/nav.js?v={{ asset_version() }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,107 @@
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="value">{{ quality.total_crashes }}</div>
+    <div class="label">Scoring failures under missing data</div>
+    <div class="sub">Across every sandbox field group</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ quality.degradation|length }}</div>
+    <div class="label">Field groups stress-tested</div>
+    <div class="sub">Each removed from every record and re-scored</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ quality.most_load_bearing }}</div>
+    <div class="label">Most load-bearing source</div>
+    <div class="sub">Highest tier churn when absent</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ quality.population }}</div>
+    <div class="label">Records audited</div>
+    <div class="sub">Completeness measured per field</div>
+  </div>
+</div>
+
+<section class="panel-section">
+  <h2>Degradation — what actually happens when a source is missing</h2>
+  <p class="section-lead">{{ quality.method }}</p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Source</th><th class="num">Tier churn</th><th class="num">Avg score Δ</th>
+            <th class="num">RM queue</th><th class="num">Failures</th><th>Resilience</th></tr>
+      </thead>
+      <tbody>
+        {% for d in quality.degradation %}
+        <tr>
+          <td><strong>{{ d.label }}</strong><br /><small>{{ d.degradation }}</small></td>
+          <td class="num">{{ d.tier_churn_pct }}%</td>
+          <td class="num">{{ "%+.2f"|format(d.avg_score_delta) }}</td>
+          <td class="num">{{ d.rm_queue_before }} &rarr; {{ d.rm_queue_after }}</td>
+          <td class="num">{{ d.crashes }}</td>
+          <td><span class="pill pill-{{ 'pass' if d.resilience == 'high' else 'watch' if d.resilience == 'moderate' else 'review' }}">{{ d.resilience }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="section-note">
+    Every direction is conservative by design: losing a data source shrinks the confident queue rather
+    than inflating it. An absent field is scored as unknown, never as good news — a record with no debt
+    history must not look like a debt-free customer.
+  </p>
+</section>
+
+<section class="panel-section">
+  <h2>Ingest rules</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Condition</th><th>Engine behaviour</th></tr></thead>
+      <tbody>
+        {% for rule in quality.ingest_rules %}
+        <tr><td><strong>{{ rule[0] }}</strong></td><td>{{ rule[1] }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel-section">
+  <h2>Field completeness against the sandbox contract</h2>
+  {% for g in quality.groups %}
+  <h3 style="margin-top:22px">
+    {{ g.label }}
+    <span class="pill pill-{{ 'pass' if g.status == 'pass' else 'watch' if g.status == 'warn' else 'review' }}">{{ g.status }}</span>
+    <span class="pill pill-muted">{{ g.required_completeness_pct }}% complete</span>
+  </h3>
+  <p class="section-note">Source: {{ g.endpoint }}</p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Field</th><th>Requirement</th><th class="num">Present</th><th class="num">Missing</th><th class="num">Out of range</th><th>Range rule</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for f in g.required_fields %}
+        <tr>
+          <td><strong>{{ f.label }}</strong>{% if f.critical %} <span class="pill pill-review">required</span>{% endif %}</td>
+          <td>Required</td>
+          <td class="num">{{ f.present_pct }}%</td>
+          <td class="num">{{ f.missing_pct }}%</td>
+          <td class="num">{{ f.out_of_range_pct }}%</td>
+          <td><small>{{ f.range_rule }}</small></td>
+          <td><span class="pill pill-{{ 'pass' if f.status == 'pass' else 'watch' if f.status == 'warn' else 'review' }}">{{ f.status }}</span></td>
+        </tr>
+        {% endfor %}
+        {% for f in g.optional_fields %}
+        <tr>
+          <td>{{ f.label }}</td>
+          <td>Optional</td>
+          <td class="num">{{ f.present_pct }}%</td>
+          <td class="num">{{ f.missing_pct }}%</td>
+          <td class="num">{{ f.out_of_range_pct }}%</td>
+          <td><small>{{ f.range_rule }}</small></td>
+          <td><span class="pill pill-muted">optional</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+</section>

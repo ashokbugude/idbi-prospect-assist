@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Governance — IDBI Prospect Assist AI{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <span class="badge">Responsible AI &amp; Model Risk</span>
+  <h1>Governance</h1>
+  <p class="subtitle">
+    The three questions a bank's model risk function asks before a pilot: is it fair, can it be audited
+    and will it still be right in six months, and what happens when the data is missing. Every figure
+    below is recomputed against the live population — none of it is a slide.
+  </p>
+</div>
+
+<nav class="tabs" aria-label="Governance sections">
+  <a href="/governance?tab=fairness" {% if tab == 'fairness' %}class="active" aria-current="page"{% endif %}>Fairness &amp; bias</a>
+  <a href="/governance?tab=model-risk" {% if tab == 'model-risk' %}class="active" aria-current="page"{% endif %}>Model risk</a>
+  <a href="/governance?tab=data-quality" {% if tab == 'data-quality' %}class="active" aria-current="page"{% endif %}>Data quality</a>
+</nav>
+
+{% if tab == 'fairness' %}
+  {% include "_gov_fairness.html" %}
+{% elif tab == 'model-risk' %}
+  {% include "_gov_model_risk.html" %}
+{% else %}
+  {% include "_gov_data_quality.html" %}
+{% endif %}
+{% endblock %}

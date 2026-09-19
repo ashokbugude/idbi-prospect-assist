@@ -44,9 +44,12 @@ def run_conversion_backtest(customers: list[dict], trials: int = 500, seed: int 
     rng = random.Random(seed)
 
     def _simulate(contact_fn, n_trials: int) -> dict:
+        # The contact set is deterministic, so build it once rather than
+        # n_trials times. The RNG draw order is unchanged, so results are
+        # bit-identical to the previous implementation.
+        contacted = [i for i, p in enumerate(ranked) if contact_fn(p)]
         rates: list[float] = []
         for _ in range(n_trials):
-            contacted = [i for i, p in enumerate(ranked) if contact_fn(p)]
             if not contacted:
                 rates.append(0.0)
                 continue
@@ -61,9 +64,7 @@ def run_conversion_backtest(customers: list[dict], trials: int = 500, seed: int 
             "median_conversion_pct": round(rates[mid] * 100, 2),
             "ci_90_low_pct": round(p5 * 100, 2),
             "ci_90_high_pct": round(p95 * 100, 2),
-            "avg_contacted_pct": round(
-                sum(1 for p in ranked if contact_fn(p)) / len(ranked) * 100, 1
-            ),
+            "avg_contacted_pct": round(len(contacted) / len(ranked) * 100, 1),
         }
 
     strategies = {

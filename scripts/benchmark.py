@@ -33,7 +33,9 @@ def main() -> int:
     print("=== Prospect Assist AI — Benchmark ===")
     print(f"Single customer score p95: {p95_single:.1f} ms (n=50)")
     print(f"Rank 200 customers mean: {statistics.mean(batch_times):.1f} ms")
-    print(f"Rank 200 customers p95: {statistics.quantiles(batch_times, n=5)[-1]:.1f} ms")
+    # 5 samples cannot support a p95; report the observed max instead of
+    # mislabelling the 80th percentile as one.
+    print(f"Rank 200 customers max: {max(batch_times):.1f} ms (n=5)")
     print("Claim: 10K leads/month at <2s p95 per score — headroom on laptop-class CPU")
     return 0
 

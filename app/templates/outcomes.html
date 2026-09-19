@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Outcomes — IDBI Prospect Assist AI{% endblock %}
+
+{% block content %}
+{% set t = report.training %}
+<div class="page-hero">
+  <span class="badge">Feedback Loop</span>
+  <h1>Outcomes</h1>
+  <p class="subtitle">
+    Round 1 scored leads and never found out whether it was right. This is the loop that closes:
+    every RM disposition turns one documented assumption into a measurement, and becomes the label
+    the next model trains on.
+  </p>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="value">{{ report.leads_with_outcome }}</div>
+    <div class="label">Leads with an outcome</div>
+    <div class="sub">{{ report.total_records }} records, append-only</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ report.validated_tiers }} / 4</div>
+    <div class="label">Tiers validated</div>
+    <div class="sub">{% if report.diverging_tiers %}Diverging: {{ report.diverging_tiers|join(', ') }}{% else %}No tier diverging from assumption{% endif %}</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ t.progress_pct }}%</div>
+    <div class="label">Retrain readiness</div>
+    <div class="capacity-bar"><span style="width: {{ [t.progress_pct, 100]|min }}%"></span></div>
+    <div class="sub">{{ t.usable_labels }} of {{ t.retrain_threshold }} usable labels</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ t.positive_labels }}</div>
+    <div class="label">Booked loans captured</div>
+    <div class="sub">The positive class for supervised retraining</div>
+  </div>
+</div>
+
+{% if t.simulated_outcomes %}
+<p class="insight-banner">
+  <strong>{{ t.simulated_outcomes }} of these outcomes are simulated</strong> so the loop demonstrates
+  its mechanism on a cold start. They are flagged in the store and excluded from any claim of real
+  performance. {{ t.real_outcomes }} captured from live RM entry.
+</p>
+{% endif %}
+
+<section class="panel-section">
+  <h2>Calibration — assumption vs measurement</h2>
+  <p class="section-lead">
+    Every conversion rate on the impact page is a documented assumption. Each captured outcome moves one
+    of them toward a measured fact, and the gap is published rather than quietly closed.
+  </p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Tier</th><th class="num">Assumed</th><th class="num">Observed</th><th class="num">Delta</th>
+            <th class="num">Contacted</th><th class="num">Booked</th><th>Status</th><th>Reading</th></tr>
+      </thead>
+      <tbody>
+        {% for c in report.calibration %}
+        <tr>
+          <td><span class="tier {{ 'quality-lead' if c.tier == 'Quality Lead' else 'serious' if c.tier == 'Serious' else 'interested' if c.tier == 'Interested' else 'window-shop-risk' }}">{{ c.tier }}</span></td>
+          <td class="num">{{ c.assumed_conversion_pct }}%</td>
+          <td class="num">{% if c.observed_conversion_pct is none %}—{% else %}{{ c.observed_conversion_pct }}%{% endif %}</td>
+          <td class="num lever-delta {% if c.delta_pp and c.delta_pp > 0 %}pos{% else %}zero{% endif %}">
+            {% if c.delta_pp is none %}—{% else %}{{ "%+.1f"|format(c.delta_pp) }} pp{% endif %}
+          </td>
+          <td class="num">{{ c.contacted }}</td>
+          <td class="num">{{ c.converted }}</td>
+          <td><span class="pill pill-{{ 'pass' if c.status == 'validated' else 'watch' if c.status == 'emerging' else 'review' if c.status == 'diverging' else 'muted' }}">{{ c.status }}</span></td>
+          <td><small>{{ c.note }}</small></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="section-note">
+    Conversion denominators count contacted leads only — an unreachable customer is not a failed pitch.
+  </p>
+</section>
+
+<section class="panel-section">
+  <h2>Why this changes the model</h2>
+  <div class="detail-kv wide">
+    <div><span>Label source today</span><strong>{{ t.current_label_source }}</strong></div>
+    <div><span>Label source after retrain</span><strong>{{ t.next_label_source }}</strong></div>
+    <div><span>Usable labels</span><strong>{{ t.usable_labels }} / {{ t.retrain_threshold }}</strong></div>
+    <div><span>Ready to retrain</span><strong class="{{ 'rag-green' if t.ready_to_retrain else 'rag-amber' }}">{{ "Yes" if t.ready_to_retrain else "Not yet" }}</strong></div>
+  </div>
+  {% if t.blocker %}<p class="section-note"><strong>Blocker:</strong> {{ t.blocker }}</p>{% endif %}
+  <div class="finding-card">
+    <h4>The circularity this breaks</h4>
+    <p>{{ t.why_it_matters }}</p>
+  </div>
+</section>
+
+<section class="panel-section">
+  <h2>Log a call disposition</h2>
+  <p class="section-lead">
+    What an RM does after the call. Appended to the outcome store and the decision audit log in one step.
+  </p>
+  <form class="filters" id="outcome-form">
+    <label>
+      Customer ID
+      <input type="text" name="customer_id" value="IDBI-L10010" required />
+    </label>
+    <label>
+      Disposition
+      <select name="disposition">
+        {% for d in report.disposition_options %}
+        <option value="{{ d.code }}">{{ d.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      RM
+      <input type="text" name="rm_id" value="RM-01" />
+    </label>
+    <label>
+      Notes
+      <input type="text" name="notes" placeholder="Optional" />
+    </label>
+    <button type="submit">Record outcome</button>
+  </form>
+  <p class="section-note" id="outcome-result" aria-live="polite"></p>
+
+  <div class="table-wrap" style="margin-top:16px">
+    <table class="data-table">
+      <thead><tr><th>Disposition</th><th>Meaning</th><th class="num">Logged</th><th class="num">Share</th><th>Counts as contact</th><th>Counts as conversion</th></tr></thead>
+      <tbody>
+        {% for d in report.dispositions %}
+        <tr>
+          <td><strong>{{ d.label }}</strong></td>
+          <td><small>{{ d.description }}</small></td>
+          <td class="num">{{ d.count }}</td>
+          <td class="num">{{ d.share_pct }}%</td>
+          <td>{{ "Yes" if d.counts_as_contact else "No" }}</td>
+          <td>{{ "Yes" if d.counts_as_conversion else "No" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if report.rm_activity %}
+<section class="panel-section">
+  <h2>RM activity</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>RM</th><th class="num">Outcomes logged</th><th class="num">Contacted</th><th class="num">Contact rate</th><th class="num">Booked</th><th class="num">Book rate</th></tr></thead>
+      <tbody>
+        {% for r in report.rm_activity %}
+        <tr>
+          <td><strong>{{ r.rm_id }}</strong></td>
+          <td class="num">{{ r.logged }}</td>
+          <td class="num">{{ r.contacted }}</td>
+          <td class="num">{{ r.contact_rate_pct }}%</td>
+          <td class="num">{{ r.booked }}</td>
+          <td class="num">{{ r.book_rate_pct }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="section-note">
+    Shown because a pilot needs to separate a weak model from a weak week. Not a performance ranking.
+  </p>
+</section>
+{% endif %}
+
+<section class="panel-section">
+  <h2>How the store works</h2>
+  <p>{{ report.method }}</p>
+  <p class="section-note">
+    Dispositions are also available through the <a href="/api/outcomes">outcomes API</a> for the bank's
+    own reporting.
+  </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const form = document.getElementById('outcome-form');
+  const result = document.getElementById('outcome-result');
+  if (!form) return;
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    result.textContent = 'Recording…';
+    try {
+      const res = await fetch('/api/outcomes', { method: 'POST', body: new FormData(form) });
+      const data = await res.json();
+      if (!res.ok) { result.textContent = data.error || 'Could not record that outcome.'; return; }
+      const r = data.recorded;
+      result.textContent =
+        `Recorded ${r.disposition} for ${r.customer_id} (${r.lead_tier}). ` +
+        `${data.report.training.usable_labels} of ${data.report.training.retrain_threshold} labels captured. Reloading…`;
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err) {
+      result.textContent = 'Network error — outcome not recorded.';
+    }
+  });
+})();
+</script>
+{% endblock %}

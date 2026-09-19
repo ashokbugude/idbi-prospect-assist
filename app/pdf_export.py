@@ -61,9 +61,14 @@ def build_underwriter_pdf(profile: dict, raw: dict) -> bytes:
     pdf.multi_cell(_PAGE_W, 5, _pdf_safe(bu.get("underwriting_hint", "")))
 
     pdf.section("Dimension Scores")
-    for dim in ("repayment_capacity", "purchase_intent", "behavioral_discipline"):
+    dimension_labels = {
+        "repayment_capacity": "Repayment capacity",
+        "purchase_intent": "Purchase intent",
+        "behavioral_discipline": "Behavioural discipline",
+    }
+    for dim, dim_label in dimension_labels.items():
         d = profile.get(dim) or {}
-        pdf.cell(0, 5, f"{d.get('name', dim)}: {d.get('score', 0)}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 5, _pdf_safe(f"{d.get('name') or dim_label}: {d.get('score', 0)}"), new_x="LMARGIN", new_y="NEXT")
         for r in (d.get("reasons") or [])[:2]:
             pdf.multi_cell(_PAGE_W, 5, _pdf_safe(f"  - {r}"))
 

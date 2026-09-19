@@ -1,0 +1,256 @@
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="value">
+      <span class="pill pill-{{ report.overall_status }}">{{ report.overall_status|upper }}</span>
+    </div>
+    <div class="label">Audit verdict</div>
+    <div class="sub">{{ report.headline }}</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ report.worst_disparate_impact_ratio }}</div>
+    <div class="label">Worst disparate impact ratio</div>
+    <div class="sub">Four-fifths threshold: {{ report.four_fifths_threshold }}</div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ report.prohibited_attribute_audit.feature_count }}</div>
+    <div class="label">Model features audited</div>
+    <div class="sub">
+      {% if report.prohibited_attribute_audit.passed %}0 prohibited attributes found{% else %}Prohibited attributes detected{% endif %}
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="value">{{ report.explainability.all_three_dimensions_explained_pct }}%</div>
+    <div class="label">Leads fully explained</div>
+    <div class="sub">{{ report.explainability.deprioritised_with_reason_pct }}% of suppressed leads carry a reason</div>
+  </div>
+</div>
+
+<section class="panel-section">
+  <h2>Selection-rate parity (four-fifths rule)</h2>
+  <p class="section-lead">{{ report.method }}</p>
+
+  {% for seg in report.segments %}
+  <h3 style="margin-top:26px">
+    {{ seg.dimension }}
+    <span class="pill pill-{{ seg.status }}">{{ seg.status }}</span>
+    {% if seg.model_input %}<span class="pill pill-muted">model input</span>
+    {% else %}<span class="pill pill-muted">not a model input</span>{% endif %}
+  </h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Group</th><th class="num">Leads</th><th class="num">RM queue rate</th>
+          <th class="num">Quality rate</th><th class="num">Window-shop rate</th>
+          <th class="num">Avg composite</th><th>Disparate impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in seg.groups %}
+        <tr>
+          <td><strong>{{ g.group }}</strong></td>
+          <td class="num">{{ g.n }}</td>
+          <td class="num">{{ g.rm_queue_rate_pct }}%</td>
+          <td class="num">{{ g.quality_rate_pct }}%</td>
+          <td class="num">{{ g.window_shop_rate_pct }}%</td>
+          <td class="num">{{ g.avg_composite }}</td>
+          <td>
+            {% if g.disparate_impact_ratio is none %}
+              <span class="pill pill-muted">n &lt; 15 — not scored</span>
+            {% else %}
+              <div class="di-bar">
+                <span class="lever-delta">{{ g.disparate_impact_ratio }}</span>
+                <span class="di-track">
+                  <span class="di-fill {{ g.status }}" style="width: {{ [(g.disparate_impact_ratio * 100)|round(0), 100]|min }}%"></span>
+                  <span class="di-threshold" style="left: 80%"></span>
+                </span>
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if seg.status != 'pass' %}
+  <div class="finding-card {{ seg.status }}">
+    <h4>Finding — {{ seg.dimension }}{% if seg.failing_groups %}: {{ seg.failing_groups|join(', ') }}{% endif %}</h4>
+    <p>{{ seg.business_necessity }}</p>
+    {% if seg.mitigation_actions %}
+    <strong>Mitigation:</strong>
+    <ul>{% for m in seg.mitigation_actions %}<li>{{ m }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endfor %}
+</section>
+
+{% if report.mitigation_simulations %}
+<section class="panel-section">
+  <h2>Does the mitigation actually work?</h2>
+  <p class="section-lead">
+    For every dimension flagged above, the Account Aggregator lever is re-run across the whole population
+    through the production rule engine and the parity ratio is recomputed. This is the mitigation an RM can
+    execute today — so it is measured, not promised.
+  </p>
+  {% for sim in report.mitigation_simulations %}
+  <h3 style="margin-top:24px">
+    {{ sim.dimension }}
+    {% if sim.closes_gap %}<span class="pill pill-pass">gap closed</span>
+    {% elif sim.improvement > 0 %}<span class="pill pill-watch">narrows, does not close</span>
+    {% else %}<span class="pill pill-review">no material improvement</span>{% endif %}
+  </h3>
+  <p class="section-note">Lever simulated: {{ sim.lever }}</p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Group</th><th class="num">Leads</th>
+          <th class="num">RM queue rate — before</th><th class="num">after</th>
+          <th class="num">DI before</th><th class="num">DI after</th><th class="num">Change</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in sim.rows %}
+        <tr>
+          <td><strong>{{ r.group }}</strong></td>
+          <td class="num">{{ r.n }}</td>
+          <td class="num">{{ r.rate_before_pct }}%</td>
+          <td class="num">{{ r.rate_after_pct }}%</td>
+          <td class="num">{{ r.di_before }}</td>
+          <td class="num">{{ r.di_after }}</td>
+          <td class="num lever-delta {% if r.di_change > 0 %}pos{% else %}zero{% endif %}">{{ "%+.2f"|format(r.di_change) }}</td>
+          <td><span class="pill pill-{{ r.status_after if r.status_after in ['pass','watch','review'] else 'muted' }}">{{ r.status_after }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="section-note">{{ sim.note }}</p>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if report.product_eligibility %}
+<section class="panel-section">
+  <h2>Not called is not the same as not lendable</h2>
+  <p class="section-lead">
+    A low selection rate is only a fair-lending problem if the segment is also excluded from credit.
+    These figures separate the two: the share of each group eligible for at least one product, against the
+    share that earns an RM call today.
+  </p>
+  {% for dim, rows in report.product_eligibility.items() %}
+  <h3 style="margin-top:22px">{{ dim }}</h3>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Group</th><th class="num">Leads</th><th class="num">Eligible for ≥1 product</th><th class="num">In RM queue</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><strong>{{ r.group }}</strong></td>
+          <td class="num">{{ r.n }}</td>
+          <td class="num">{{ r.any_product_eligible_pct }}%</td>
+          <td class="num">{{ r.rm_queue_rate_pct }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="panel-section">
+  <h2>Prohibited attributes — verified in code</h2>
+  <p class="section-lead">{{ report.prohibited_attribute_audit.note }}</p>
+  <div class="detail-kv wide">
+    <div><span>Model features scanned</span><strong>{{ report.prohibited_attribute_audit.feature_count }}</strong></div>
+    <div><span>Record fields scanned</span><strong>{{ report.prohibited_attribute_audit.record_field_count }}</strong></div>
+    <div><span>Prohibited features found</span>
+      <strong class="{% if report.prohibited_attribute_audit.passed %}rag-green{% else %}rag-red{% endif %}">
+        {{ report.prohibited_attribute_audit.prohibited_features_found|length }}
+      </strong></div>
+    <div><span>Verdict</span>
+      <strong><span class="pill pill-{{ 'pass' if report.prohibited_attribute_audit.passed else 'review' }}">
+        {{ 'PASS' if report.prohibited_attribute_audit.passed else 'FAIL' }}</span></strong></div>
+  </div>
+  <div class="table-wrap" style="margin-top:14px">
+    <table class="data-table">
+      <thead><tr><th>Attribute</th><th>Treatment</th></tr></thead>
+      <tbody>
+        {% for a in report.prohibited_attribute_audit.attributes %}
+        <tr><td><strong>{{ a.attribute }}</strong></td><td>{{ a.treatment }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel-section">
+  <h2>Proxy-attribute register</h2>
+  <p class="section-lead">
+    Excluding a protected attribute is not enough if a permitted feature stands in for it. Each candidate
+    proxy is named with the reason it is used and what caps the risk.
+  </p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Feature</th><th>Model input</th><th>Could proxy for</th><th>Why it is used</th><th>Mitigation</th></tr></thead>
+      <tbody>
+        {% for p in report.proxy_register %}
+        <tr>
+          <td><strong>{{ p.feature }}</strong></td>
+          <td><span class="pill pill-{{ 'rm' if p.used else 'muted' }}">{{ 'Yes' if p.used else 'No' }}</span></td>
+          <td>{{ p.proxy_for }}</td>
+          <td>{{ p.why_used }}</td>
+          <td>{{ p.mitigation }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel-section">
+  <h2>Explainability coverage</h2>
+  <div class="detail-kv wide">
+    <div><span>Leads scored</span><strong>{{ report.explainability.leads_scored }}</strong></div>
+    <div><span>All three dimensions explained</span><strong>{{ report.explainability.all_three_dimensions_explained_pct }}%</strong></div>
+    <div><span>Deprioritised leads</span><strong>{{ report.explainability.deprioritised_leads }}</strong></div>
+    <div><span>Deprioritised with a reason</span><strong>{{ report.explainability.deprioritised_with_reason_pct }}%</strong></div>
+  </div>
+  <p class="section-note">{{ report.explainability.note }}</p>
+</section>
+
+<section class="panel-section">
+  <h2>Governance controls</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Control</th><th>How it is enforced</th><th>Evidence</th></tr></thead>
+      <tbody>
+        {% for c in report.governance_controls %}
+        <tr><td><strong>{{ c.control }}</strong></td><td>{{ c.detail }}</td><td>{{ c.evidence }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel-section">
+  <h2>DPDP data inventory</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Category</th><th>Fields</th><th>Purpose</th><th>Lawful basis</th><th>Retention</th><th>Minimisation</th></tr></thead>
+      <tbody>
+        {% for d in report.data_inventory %}
+        <tr>
+          <td><strong>{{ d.category }}</strong></td><td>{{ d.fields }}</td><td>{{ d.purpose }}</td>
+          <td>{{ d.lawful_basis }}</td><td>{{ d.retention }}</td><td>{{ d.minimisation }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="section-note">
+    {{ report.disclaimer }} · Machine-readable: <a href="/api/fairness">/api/fairness</a>
+  </p>
+</section>

@@ -2,7 +2,7 @@
 
 Track **02** prototype for **IDBI Innovate 2026** — behavioral lead intelligence for existing IDBI liability customers.
 
-## What it does (v0.7.0)
+## What it does (v0.9.0)
 
 Addresses IDBI's stated pain: **~1% lead conversion** with too many window-shoppers wasting RM time.
 
@@ -18,6 +18,19 @@ Addresses IDBI's stated pain: **~1% lead conversion** with too many window-shopp
 | **Product Match** | Home, Mortgage, Auto, Personal, Consumer Durable |
 | **GenAI RM Brief** | AI-assisted call script per customer (Srishti GenAI) |
 | **Account Aggregator** | Simulated AA consent → fetch other-bank statements → rescore |
+| **Lead Uplift Simulator** | Counterfactual "what would move this lead" — 11 levers, each a real re-score |
+| **Lead stress test** | Adverse-scenario re-score → Resilient / Fragile tier verdict |
+| **Next Best Action** | Channel, SLA, script, RM-minute cost and expected ₹ per action |
+| **Branch day plan** | Every action packed into real RM capacity, SLA commitments first |
+| **Fairness audit** | Four-fifths rule across age, employment, geography, income — live, every load |
+| **DPDP governance** | Proxy register, data inventory, explainability coverage, control evidence |
+| **Outcome feedback loop** | RM call dispositions -> calibration of every conversion assumption -> retrain labels |
+| **Decision audit log** | Append-only, versioned, reason-coded, CSV-exportable |
+| **Drift monitoring** | PSI per feature with the alarm demonstrated firing |
+| **Data-quality gates** | Completeness per field + measured degradation when a sandbox source is missing |
+| **Vernacular briefs** | Hindi, Marathi and Tamil call scripts, template-driven |
+| **Live what-if** | Sliders that re-score the lead through the production engine during a call |
+| **Ingest gate** | Type coercion + hard validation at the sandbox boundary — strings, nulls and out-of-range values |
 
 ## Pages
 
@@ -30,6 +43,12 @@ Addresses IDBI's stated pain: **~1% lead conversion** with too many window-shopp
 | `/ml` | ML credibility report (R², confusion matrix, rules vs hybrid) |
 | `/multi-bank` | AA flow + cross-bank income + statement upload |
 | `/architecture` | AWS diagram + compliance + pilot KPIs |
+| `/actions` | Next Best Action — branch playbook, today's queue, capacity plan |
+| `/fairness` | Fair-lending audit, proxy register, DPDP data inventory |
+| `/usps` | 34 differentiators, each linked to verifiable evidence in the app |
+| `/glossary` | 153 terms and abbreviations used across the repo, searchable |
+| `/outcomes` | Feedback loop — dispositions, calibration, retrain readiness |
+| `/governance` | Fairness &amp; bias · Model risk (audit + drift) · Data quality |
 
 ## Judge quick start
 
@@ -42,7 +61,8 @@ Addresses IDBI's stated pain: **~1% lead conversion** with too many window-shopp
 | **Hero window shopper** | `/customer/IDBI-L10121` (Rahul Sharma) |
 | **Hero multi-bank (AA demo)** | `/multi-bank` → `IDBI-L10055` (Aarav Singh) — Interested → Serious after AA fetch |
 
-See `docs/AMA_ALIGNMENT.md` for full Track 02 traceability.
+See `docs/AMA_ALIGNMENT.md` for full Track 02 traceability and
+`docs/TRACK02_GAP_ANALYSIS.md` for the requirement-by-requirement coverage review.
 
 ## Quick start
 
@@ -63,6 +83,7 @@ python scripts/compare_scoring.py
 ```
 
 - **35 features** including bureau score, UPI discipline, geo, multi-bank
+- Customer name is deliberately **excluded** from every feature — surname is a caste/community proxy
 - Safe hybrid: ±8 pt nudge max; never demotes Quality Leads
 - Model card: `GET /api/ml/model-card`
 
@@ -90,6 +111,18 @@ python scripts/benchmark.py
 | `GET /api/customer/{id}/rm-brief` | GenAI RM call brief |
 | `GET /api/customer/{id}/underwriter-pdf` | Underwriter packet PDF |
 | `GET /api/demo-comparison` | Before/After conversion comparison |
+| `GET /api/customer/{id}/uplift` | Counterfactual lever simulation + stress test |
+| `GET /api/customer/{id}/next-best-action` | Costed, ranked action list for one lead |
+| `GET /api/next-best-action` | Branch-wide action plan and capacity utilisation |
+| `GET /api/fairness` | Fair-lending audit (public — no login) |
+| `GET /api/usps` | USP catalogue (public — no login) |
+| `GET /api/glossary` | Glossary (public — no login) |
+| `GET/POST /api/outcomes` | Read the feedback loop, or record an RM disposition |
+| `GET /api/monitoring` | Population drift (PSI) per feature (public) |
+| `GET /api/data-quality` | Completeness + degradation report (public) |
+| `GET /api/audit` · `/api/audit/export` | Decision audit log, JSON or CSV |
+| `POST /api/customer/{id}/simulate` | Live what-if re-score through the rule engine |
+| `POST /api/ingest/check` | Run a raw sandbox record through coercion + the hard ingest gate |
 
 ## Deploy (Render — free)
 

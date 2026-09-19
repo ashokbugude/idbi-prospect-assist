@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.data_generator import generate_customer, generate_dataset
 from app.scoring import (
     LEAD_TIERS,

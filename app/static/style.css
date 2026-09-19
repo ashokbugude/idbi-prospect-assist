@@ -1108,3 +1108,342 @@ code {
 
   .rm-queue-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ==========================================================================
+   v0.8.0 — Actions, Fairness, USPs, Glossary, Uplift Simulator
+   ========================================================================== */
+
+/* ---- shared section scaffolding ---- */
+.panel-section {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 22px 24px; margin-bottom: 20px; box-shadow: var(--shadow-sm);
+}
+.panel-section > h2 { margin-top: 0; }
+.section-lead { color: var(--muted); max-width: 78ch; margin: 4px 0 18px; }
+.pill {
+  display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: .72rem;
+  font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
+}
+.pill-new { background: var(--idbi-orange-light); color: var(--idbi-orange-dark); }
+.pill-pass { background: #e4f4ee; color: #0a6b4b; }
+.pill-watch { background: var(--idbi-orange-light); color: var(--idbi-orange-dark); }
+.pill-review { background: #fdecea; color: #a5281b; }
+.pill-muted { background: var(--panel-2); color: var(--muted); }
+.pill-rm { background: var(--idbi-green-light); color: var(--idbi-green-darker); }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.data-table th, .data-table td {
+  padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.data-table th {
+  font-size: .74rem; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--muted); background: var(--panel-2); position: sticky; top: 0;
+}
+.data-table td.num, .data-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table tbody tr:hover { background: var(--panel-2); }
+.row-strong td { font-weight: 600; }
+
+/* ---- uplift simulator ---- */
+.uplift-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 14px; }
+.uplift-arrow { color: var(--muted); font-size: 1.3rem; }
+.uplift-gap {
+  background: var(--idbi-orange-light); color: var(--idbi-orange-dark); font-weight: 700;
+  padding: 6px 12px; border-radius: 999px; font-size: .86rem;
+}
+.lever-delta { font-weight: 700; font-variant-numeric: tabular-nums; }
+.lever-delta.pos { color: var(--idbi-green-dark); }
+.lever-delta.zero { color: var(--muted); }
+.path-card {
+  background: var(--idbi-green-light); border: 1px solid var(--idbi-green-muted);
+  border-radius: var(--radius); padding: 16px 18px; margin-top: 16px;
+}
+.path-card ol { margin: 10px 0 0; padding-left: 20px; }
+.path-card li { margin-bottom: 5px; }
+.stress-card {
+  border-radius: var(--radius); padding: 16px 18px; margin-top: 16px; border: 1px solid var(--border);
+}
+.stress-card.resilient { background: #eef8f3; border-color: #bfe3d3; }
+.stress-card.fragile { background: var(--idbi-orange-light); border-color: #f3cfa6; }
+
+/* ---- next best action ---- */
+.nba-hero {
+  display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start;
+  background: linear-gradient(135deg, var(--idbi-green) 0%, var(--idbi-green-darker) 100%);
+  color: #fff; border-radius: var(--radius-lg); padding: 22px 26px; margin-bottom: 18px;
+}
+.nba-hero h3,
+.nba-hero p,
+.nba-hero small,
+.nba-hero strong,
+.nba-hero .badge { color: #fff; }
+.nba-hero h3 { margin: 6px 0 8px; font-size: 1.24rem; color: #fff; }
+.nba-hero .badge { background: rgba(255,255,255,.2); border-color: transparent; }
+.nba-hero .nba-script {
+  background: rgba(255,255,255,.14); border-left: 3px solid var(--idbi-orange);
+  padding: 11px 14px; border-radius: 6px; margin-top: 12px; font-style: italic;
+}
+.nba-hero .nba-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.nba-hero .nba-meta span {
+  background: rgba(255,255,255,.18); padding: 4px 10px; border-radius: 999px; font-size: .78rem;
+}
+.nba-value { text-align: right; min-width: 150px; }
+.nba-value .big { font-size: 1.7rem; font-weight: 700; line-height: 1.15; }
+.nba-value small { opacity: .85; display: block; margin-top: 3px; }
+
+.kpi-row { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 20px; }
+.kpi {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 15px 17px; box-shadow: var(--shadow-sm);
+}
+.kpi .value { font-size: 1.55rem; font-weight: 700; color: var(--idbi-green-darker); line-height: 1.2; }
+.kpi .label { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
+.kpi .sub { font-size: .78rem; color: var(--muted); margin-top: 5px; }
+.capacity-bar { height: 10px; border-radius: 999px; background: var(--border); overflow: hidden; margin-top: 10px; }
+.capacity-bar span { display: block; height: 100%; background: var(--idbi-green); }
+
+/* ---- fairness ---- */
+.di-bar { display: flex; align-items: center; gap: 8px; }
+.di-track { flex: 1; min-width: 70px; height: 8px; background: var(--border); border-radius: 999px; position: relative; }
+.di-fill { height: 100%; border-radius: 999px; }
+.di-fill.pass { background: var(--idbi-green); }
+.di-fill.watch { background: var(--idbi-orange); }
+.di-fill.review { background: var(--danger); }
+.di-threshold { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text); opacity: .45; }
+.finding-card { border-left: 4px solid var(--idbi-orange); background: var(--panel-2); padding: 14px 16px; border-radius: 0 var(--radius) var(--radius) 0; margin-top: 14px; }
+.finding-card.review { border-left-color: var(--danger); }
+.finding-card h4 { margin: 0 0 6px; }
+.finding-card ul { margin: 8px 0 0; padding-left: 20px; }
+
+/* ---- USPs ---- */
+.usp-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+.usp-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;
+}
+.usp-card h3 { margin: 8px 0 10px; font-size: 1.02rem; line-height: 1.35; }
+.usp-card .claim { margin: 0 0 12px; }
+.usp-card .why { color: var(--muted); font-size: .89rem; margin: 0 0 12px; }
+.usp-card .contrast {
+  font-size: .84rem; color: var(--muted); border-top: 1px dashed var(--border);
+  padding-top: 10px; margin-top: auto;
+}
+.usp-card .contrast strong { color: var(--text); }
+.usp-card .evidence { margin-top: 11px; }
+.usp-card .evidence a {
+  display: inline-block; font-size: .84rem; font-weight: 600; color: var(--idbi-green-dark);
+}
+.pillar-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin: 28px 0 14px; }
+.pillar-head h2 { margin: 0; }
+.pillar-head .strapline { color: var(--muted); }
+
+/* ---- glossary ---- */
+.glossary-toolbar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px;
+  position: sticky; top: var(--idbi-header-offset, 64px); z-index: 20;
+  background: var(--bg); padding: 12px 0;
+}
+.glossary-toolbar input[type="search"] {
+  flex: 1; min-width: 240px; padding: 10px 14px; border: 1px solid var(--border-strong);
+  border-radius: var(--radius); font: inherit; background: var(--panel);
+}
+.glossary-toolbar input[type="search"]:focus { outline: 2px solid var(--idbi-green); outline-offset: 1px; }
+.chip {
+  border: 1px solid var(--border-strong); background: var(--panel); color: var(--text);
+  padding: 7px 13px; border-radius: 999px; font: inherit; font-size: .85rem; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--idbi-green); border-color: var(--idbi-green); color: #fff; }
+.glossary-list { display: grid; gap: 10px; }
+.glossary-item {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 18px;
+}
+.glossary-item .term { font-weight: 700; color: var(--idbi-green-darker); }
+.glossary-item .expansion { color: var(--muted); font-weight: 400; }
+.glossary-item .cat { float: right; }
+.glossary-item p { margin: 7px 0 0; }
+.glossary-item .where { font-size: .82rem; color: var(--muted); margin-top: 7px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.glossary-empty { padding: 30px; text-align: center; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .nba-hero { grid-template-columns: 1fr; }
+  .nba-value { text-align: left; }
+  .glossary-toolbar { position: static; }
+}
+
+/* ---- pre-login header: no RM surface exposed ---- */
+.idbi-brand.is-static { cursor: default; text-decoration: none; }
+.idbi-nav-locked {
+  font-size: .8rem; letter-spacing: .06em; text-transform: uppercase;
+  opacity: .72; padding: 6px 12px; border: 1px solid rgba(255,255,255,.28);
+  border-radius: 999px; white-space: nowrap;
+}
+
+/* ==========================================================================
+   Header nav — single row, no dropdown
+   ========================================================================== */
+.idbi-header-inner {
+  max-width: 1320px;
+  flex-wrap: nowrap;
+  gap: 20px;
+}
+.idbi-nav {
+  flex-wrap: nowrap;
+  gap: 2px;
+  min-width: 0;
+}
+.idbi-nav a {
+  padding: 7px 9px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.idbi-nav a.nav-cta { margin-left: 6px; padding: 7px 12px; }
+.rm-role-badge { white-space: nowrap; margin-right: 4px; }
+
+/* Never wrap onto a second row: if the window is too narrow for the full set,
+   the nav scrolls horizontally instead (scrollbar hidden). */
+.idbi-nav {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.idbi-nav::-webkit-scrollbar { display: none; }
+
+/* ==========================================================================
+   UI polish pass — header fit, evidence bars, card hierarchy, glossary density
+   ========================================================================== */
+
+/* ---- header: brand cluster carries the RM badge; nav keeps a single row ---- */
+.container,
+.idbi-header-inner { max-width: 1320px; }
+.idbi-brand-cluster { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.idbi-nav a { padding: 6px 9px; font-size: 12px; }
+.idbi-nav a.nav-cta { padding: 6px 11px; margin-left: 5px; }
+.rm-role-badge { font-size: 10px; padding: 3px 8px; }
+
+/* ---- fairness: the disparate-impact bar is the page's key evidence ----
+   `.di-fill` is a <span>; without display:block width/height are ignored and
+   the bar renders empty. */
+.di-fill { display: block; min-width: 2px; }
+.di-track { position: relative; overflow: visible; }
+.di-bar .lever-delta { min-width: 34px; font-variant-numeric: tabular-nums; }
+
+/* ---- USP cards: titles carry hierarchy, not muted body grey ---- */
+.usp-card h3 { color: var(--idbi-green-darker); }
+.usp-flag { margin-bottom: 2px; }
+.usp-card .evidence { margin-top: 11px; padding-bottom: 12px; }
+.usp-card .evidence a { text-decoration: none; }
+.usp-card .evidence a:hover { text-decoration: underline; }
+
+/* ---- glossary: two columns on wide screens, search gets its own row ---- */
+.glossary-toolbar { flex-wrap: wrap; }
+.glossary-toolbar input[type="search"] { flex: 1 1 100%; min-width: 0; }
+.glossary-list { grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); align-items: start; }
+.glossary-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 2px;
+}
+.glossary-head h3 { margin: 0; font-size: 14px; color: var(--text); }
+.glossary-item .cat { float: none; flex-shrink: 0; }
+.glossary-item .term { color: var(--idbi-green-darker); font-weight: 700; }
+
+/* ---- login: centre the panel in the viewport ---- */
+body:has(.login-panel) .page-main { display: grid; place-items: center; min-height: 70vh; }
+
+@media (max-width: 900px) {
+  .glossary-list { grid-template-columns: 1fr; }
+}
+
+/* Final header tightening so the single row survives a 1280px laptop. */
+.idbi-header-inner { padding: 10px 20px; }
+.idbi-nav { gap: 1px; }
+.idbi-nav a { padding: 6px 8px; }
+
+/* Keep the evidence link and the contrast note together at the card foot,
+   so cards with shorter copy don't leave a gap between them. */
+.usp-card .evidence { margin-top: auto; }
+.usp-card .contrast { margin-top: 0; }
+
+/* ==========================================================================
+   v0.9.0 — governance tabs, outcome loop, what-if controls
+   ========================================================================== */
+
+/* ---- in-page tabs (server-rendered, each tab is a real URL) ---- */
+.tabs {
+  display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 22px;
+  border-bottom: 2px solid var(--border);
+}
+.tabs a {
+  padding: 10px 18px; text-decoration: none; color: var(--muted); font-weight: 600;
+  font-size: .93rem; border-bottom: 3px solid transparent; margin-bottom: -2px;
+  border-radius: 6px 6px 0 0;
+}
+.tabs a:hover { color: var(--idbi-green-dark); background: var(--panel-2); }
+.tabs a.active {
+  color: var(--idbi-green-darker); border-bottom-color: var(--idbi-orange); background: var(--panel);
+}
+
+/* ---- compact reason lists inside dense audit tables ---- */
+.reasons.compact { margin: 0; padding-left: 15px; font-size: .82rem; }
+.reasons.compact li { margin-bottom: 2px; }
+
+/* ---- what-if simulator ---- */
+.whatif-grid { display: grid; gap: 18px; grid-template-columns: minmax(280px, 1fr) minmax(240px, 320px); }
+.whatif-controls label { display: block; margin-bottom: 16px; font-size: .88rem; font-weight: 600; }
+.whatif-controls input[type="range"] { width: 100%; margin-top: 6px; accent-color: var(--idbi-green); }
+.whatif-controls .readout { float: right; font-weight: 700; color: var(--idbi-green-dark); font-variant-numeric: tabular-nums; }
+.whatif-toggles { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 16px; }
+.whatif-toggles label { display: inline-flex; align-items: center; gap: 7px; margin: 0; font-weight: 600; }
+.whatif-result {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; align-self: start; position: sticky; top: calc(var(--idbi-header-offset, 64px) + 12px);
+}
+.whatif-result .big { font-size: 2rem; font-weight: 700; color: var(--idbi-green-darker); line-height: 1.1; }
+.whatif-result .arrow { color: var(--muted); margin: 0 6px; }
+.whatif-delta { font-weight: 700; font-variant-numeric: tabular-nums; }
+.whatif-delta.pos { color: var(--idbi-green-dark); }
+.whatif-delta.neg { color: var(--danger); }
+.whatif-dims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.whatif-dims div { text-align: center; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 4px; }
+.whatif-dims strong { display: block; font-size: 1.05rem; color: var(--idbi-green-darker); }
+.whatif-dims span { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+
+/* ---- vernacular brief ---- */
+.lang-switch { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.lang-switch button {
+  background: var(--panel); border: 1px solid var(--border-strong); color: var(--text);
+  padding: 6px 14px; border-radius: 999px; font-size: .85rem; font-weight: 600; cursor: pointer;
+}
+.lang-switch button[aria-pressed="true"] { background: var(--idbi-green); border-color: var(--idbi-green); color: #fff; }
+.brief-pane[hidden] { display: none; }
+.brief-pane .script-line { font-size: 1.02rem; line-height: 1.75; }
+
+@media (max-width: 900px) {
+  .whatif-grid { grid-template-columns: 1fr; }
+  .whatif-result { position: static; }
+}
+
+/* Twelve destinations now. Widen the measure and trim the nav so the single
+   row survives without shrinking the type below readable size. */
+.container,
+.idbi-header-inner { max-width: 1400px; }
+.idbi-nav a { padding: 6px 7px; }
+.idbi-nav a.nav-cta { padding: 6px 10px; }
+
+/* `.section-note` has a -8px top margin so it tucks under a heading. After a
+   bordered block it overlapped the border instead — restore positive spacing
+   wherever it follows a panel, table or card. */
+.table-wrap + .section-note,
+.table-wrap + .export-actions,
+.detail-kv + .section-note,
+.finding-card + .section-note,
+.stress-card + .section-note,
+.path-card + .section-note,
+.kpi-row + .section-note,
+.capacity-bar + .section-note,
+.glossary-list + .section-note,
+.usp-grid + .section-note,
+.spend-chart + .section-note,
+.geo-map-mock + .section-note,
+form + .section-note { margin-top: 14px; }

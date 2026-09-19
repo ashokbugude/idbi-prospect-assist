@@ -31,6 +31,59 @@
       {% endif %}
     </section>
 
+
+    {% if nba and nba.next_best_action %}
+    {% set a = nba.next_best_action %}
+    <section class="nba-hero">
+      <div>
+        <span class="badge">Next Best Action</span>
+        <h3>{{ a.title }}</h3>
+        <p>{{ a.rationale }}</p>
+        <div class="nba-script">{{ a.script }}</div>
+        <div class="nba-meta">
+          <span>{{ a.channel }}</span>
+          {% if a.sla_hours %}<span>SLA {{ a.sla_hours }}h</span>{% endif %}
+          <span>Owner: {{ a.owner }}</span>
+          <span>{{ a.effort_minutes }} RM min</span>
+          {% if a.rm_minutes_saved %}<span>+{{ a.rm_minutes_saved }} min recovered</span>{% endif %}
+          <span>Basis: {{ a.evidence }}</span>
+        </div>
+      </div>
+      <div class="nba-value">
+        <div class="big">₹{{ "{:,}".format(a.expected_value_inr) }}</div>
+        <small>expected incremental disbursal</small>
+        <div class="big" style="margin-top:12px">+{{ a.expected_conversion_delta_pp }} pp</div>
+        <small>conversion attributable</small>
+        <div style="margin-top:12px"><strong>₹{{ "{:,}".format(a.value_per_rm_minute) }}</strong><br /><small>per RM minute</small></div>
+      </div>
+    </section>
+
+    {% if nba.actions|length > 1 %}
+    <details class="panel-section">
+      <summary><strong>All {{ nba.actions|length }} recommended actions for this lead</strong></summary>
+      <div class="table-wrap" style="margin-top:14px">
+        <table class="data-table">
+          <thead><tr><th>Action</th><th>Channel</th><th>SLA</th><th class="num">RM min</th><th class="num">+pp</th><th class="num">Expected ₹</th><th>Basis</th></tr></thead>
+          <tbody>
+            {% for act in nba.actions %}
+            <tr{% if loop.first %} class="row-strong"{% endif %}>
+              <td>{{ act.title }}<br /><small>{{ act.compliance_note }}</small></td>
+              <td>{{ act.channel }}</td>
+              <td>{% if act.sla_hours %}{{ act.sla_hours }}h{% else %}—{% endif %}</td>
+              <td class="num">{{ act.effort_minutes }}</td>
+              <td class="num">{{ act.expected_conversion_delta_pp }}</td>
+              <td class="num">₹{{ "{:,}".format(act.expected_value_inr) }}</td>
+              <td>{{ act.evidence }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="section-note">{{ nba.method }}</p>
+    </details>
+    {% endif %}
+    {% endif %}
+
     {% if tier_explanation %}
     <details class="tier-why arch-section" open>
       <summary><h2>Why this tier?</h2></summary>
@@ -43,18 +96,187 @@
     </details>
     {% endif %}
 
-    {% if rm_brief %}
-    <section class="genai-section">
-      <h2>
-        {% if customer.lead_tier == 'Window-shop Risk' %}Deprioritization Brief
-        {% elif customer.lead_tier == 'Interested' %}RM Nurture Brief
-        {% else %}RM Call Brief{% endif %}
-        <span class="badge">GenAI-ready</span>
-      </h2>
-      <div class="genai-brief">{{ rm_brief.brief_html | safe }}</div>
-      <p class="section-note">{{ rm_brief.disclaimer }} · {{ rm_brief.source_label }}</p>
+
+
+
+    {% if vernacular %}
+    <section class="panel-section">
+      <h2>Call script in the customer's language <span class="pill pill-new">New</span></h2>
+      <p class="section-lead">
+        A branch RM in Pune or Coimbatore does not open the call in English. Every string is a fixed,
+        reviewable template with the figures injected — not a live machine translation, because a bank
+        cannot put unreviewed text in front of a customer.
+      </p>
+      <div class="lang-switch" role="group" aria-label="Brief language">
+        <button type="button" data-lang="en" aria-pressed="true">English</button>
+        {% for b in vernacular %}
+        <button type="button" data-lang="{{ b.code }}" aria-pressed="false" lang="{{ b.code }}">{{ b.native }}</button>
+        {% endfor %}
+      </div>
+      <div class="brief-pane" data-lang="en">
+        <div class="genai-brief">{{ rm_brief.brief_html | safe }}</div>
+        <p class="section-note">{{ rm_brief.disclaimer }} · {{ rm_brief.source_label }}</p>
+      </div>
+      {% for b in vernacular %}
+      <div class="brief-pane" data-lang="{{ b.code }}" lang="{{ b.code }}" hidden>
+        <div class="genai-brief">
+          {% for line in b.lines %}<p class="script-line">{{ line }}</p>{% endfor %}
+        </div>
+        <p class="section-note">{{ b.disclaimer }}</p>
+        <p class="section-note"><em>{{ b.script }} script · {{ b.review_status }} — a native speaker from the circle signs off before any pilot.</em></p>
+      </div>
+      {% endfor %}
     </section>
     {% endif %}
+
+    {% if uplift %}
+    <section class="panel-section">
+      <h2>Lead Uplift Simulator <span class="pill pill-new">New</span></h2>
+      <p class="section-lead">
+        Each row below is a real re-score: the customer record is copied, one change is applied, and the
+        identical production rule engine is re-run. The movement shown is exactly what the scorer would output —
+        no model attribution, no estimate.
+      </p>
+
+      <div class="uplift-head">
+        <span class="tier {{ uplift.current_tier_css }}">{{ uplift.current_tier }}</span>
+        <strong>{{ uplift.current_score }}</strong>
+        {% if uplift.next_tier %}
+        <span class="uplift-arrow">&rarr;</span>
+        <span class="tier {{ uplift.next_tier_css }}">{{ uplift.next_tier }}</span>
+        {% if uplift.gap_points > 0 %}<span class="uplift-gap">{{ uplift.gap_points }} composite points away</span>{% endif %}
+        {% else %}
+        <span class="pill pill-pass">Top tier — nothing above this</span>
+        {% endif %}
+        <span class="pill pill-rm">{{ uplift.rm_controllable_count }} levers the RM controls</span>
+      </div>
+
+      {% if uplift.gap_gates %}
+      <ul class="reasons">
+        {% for g in uplift.gap_gates %}<li>{{ g }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Lever</th><th>Category</th><th>Owner</th><th>Horizon</th><th>Effort</th>
+                <th class="num">Δ score</th><th>Resulting tier</th><th class="num">Δ EMI headroom</th></tr>
+          </thead>
+          <tbody>
+            {% for l in uplift.levers %}
+            <tr>
+              <td><strong>{{ l.label }}</strong><br /><small>{{ l.note }}</small></td>
+              <td>{{ l.category }}</td>
+              <td>{% if l.rm_controllable %}<span class="pill pill-rm">{{ l.owner }}</span>{% else %}{{ l.owner }}{% endif %}</td>
+              <td>{{ l.horizon }}</td>
+              <td>{{ l.effort }}</td>
+              <td class="num lever-delta {% if l.delta_points > 0 %}pos{% else %}zero{% endif %}">{{ "%+.1f"|format(l.delta_points) }}</td>
+              <td>
+                <span class="tier {{ l.tier_after_css }}">{{ l.tier_after }}</span>
+                {% if l.tier_jump > 1 %}<br /><small>{{ l.tier_jump }}-tier move</small>{% endif %}
+              </td>
+              <td class="num">{% if l.emi_headroom_delta %}₹{{ "{:,}".format(l.emi_headroom_delta) }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if uplift.recommended_path and uplift.recommended_path.labels %}
+      <div class="path-card">
+        <strong>
+          {% if uplift.recommended_path.achieves_next_tier %}Shortest path to {{ uplift.next_tier }}
+          {% elif uplift.at_top_tier %}Headroom &amp; protection plan
+          {% else %}Best achievable combination{% endif %}
+        </strong>
+        <ol>
+          {% for label in uplift.recommended_path.labels %}<li>{{ label }}</li>{% endfor %}
+        </ol>
+        <p style="margin:10px 0 0">
+          Result: <span class="tier {{ uplift.recommended_path.tier_after_css }}">{{ uplift.recommended_path.tier_after }}</span>
+          at {{ uplift.recommended_path.score_after }}
+          {% if uplift.recommended_path.affordable_emi_after %}· affordable EMI ₹{{ "{:,}".format(uplift.recommended_path.affordable_emi_after) }}/mo{% endif %}
+        </p>
+        <p class="section-note" style="margin-top:6px">{{ uplift.recommended_path.note }}</p>
+        {% if uplift.recommended_path.remaining_gates %}
+        <ul class="reasons">{% for g in uplift.recommended_path.remaining_gates %}<li>Still short: {{ g }}</li>{% endfor %}</ul>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="stress-card {{ 'fragile' if uplift.stress_test.demotes else 'resilient' }}">
+        <strong>Stress test — {{ uplift.stress_test.resilience }}</strong>
+        <p style="margin:8px 0 0">{{ uplift.stress_test.description }}</p>
+        <p style="margin:8px 0 0">
+          Score {{ uplift.current_score }} &rarr; {{ uplift.stress_test.score_after }}
+          ({{ "%+.1f"|format(-uplift.stress_test.score_drop) }}) ·
+          tier <span class="tier {{ uplift.stress_test.tier_after_css }}">{{ uplift.stress_test.tier_after }}</span>
+        </p>
+        <p class="section-note" style="margin-top:6px">{{ uplift.stress_test.resilience_note }}</p>
+      </div>
+
+      <p class="section-note">
+        {{ uplift.method }}<br />{{ uplift.disclaimer }}
+      </p>
+    </section>
+    {% endif %}
+
+
+    <section class="panel-section">
+      <h2>What-if — move the levers while you are on the call <span class="pill pill-new">New</span></h2>
+      <p class="section-lead">
+        Every change below is re-scored through the production rule engine, so the tier shown is what the
+        scorer would actually output. Indicative only — it is not an offer, and the underwriter still decides.
+      </p>
+      <div class="whatif-grid">
+        <form class="whatif-controls" id="whatif-form" data-customer="{{ customer.customer_id }}">
+          <label>
+            Debt-to-income ratio <span class="readout" data-for="dti">{{ (raw.debt_to_income_ratio * 100)|round(0)|int }}%</span>
+            <input type="range" name="debt_to_income_ratio" min="0" max="100" step="1"
+                   value="{{ (raw.debt_to_income_ratio * 100)|round(0)|int }}" data-key="dti" />
+          </label>
+          <label>
+            Savings transfer ratio <span class="readout" data-for="sav">{{ (raw.savings_transfer_ratio * 100)|round(0)|int }}%</span>
+            <input type="range" name="savings_transfer_ratio" min="0" max="40" step="1"
+                   value="{{ (raw.savings_transfer_ratio * 100)|round(0)|int }}" data-key="sav" />
+          </label>
+          <label>
+            Day-1 salary spend <span class="readout" data-for="day1">{{ (raw.salary_day_spend_ratio * 100)|round(0)|int }}%</span>
+            <input type="range" name="salary_day_spend_ratio" min="0" max="100" step="1"
+                   value="{{ (raw.salary_day_spend_ratio * 100)|round(0)|int }}" data-key="day1" />
+          </label>
+          <label>
+            Luxury spend share <span class="readout" data-for="lux">{{ (raw.luxury_spend_ratio * 100)|round(0)|int }}%</span>
+            <input type="range" name="luxury_spend_ratio" min="0" max="60" step="1"
+                   value="{{ (raw.luxury_spend_ratio * 100)|round(0)|int }}" data-key="lux" />
+          </label>
+          <div class="whatif-toggles">
+            <label><input type="checkbox" name="application_started" {% if raw.application_started %}checked disabled{% endif %} /> Application started</label>
+            <label><input type="checkbox" name="aa_consent" {% if raw.has_other_bank_accounts %}checked disabled{% endif %} /> AA consent granted</label>
+          </div>
+          <p class="section-note"><button type="button" class="page-btn" id="whatif-reset">Reset to current profile</button></p>
+        </form>
+
+        <div class="whatif-result" id="whatif-result" aria-live="polite">
+          <span class="tier {{ customer.lead_tier_css }}" id="whatif-tier-before">{{ customer.lead_tier }}</span>
+          <span class="arrow">&rarr;</span>
+          <span class="tier {{ customer.lead_tier_css }}" id="whatif-tier-after">{{ customer.lead_tier }}</span>
+          <div class="big" id="whatif-score">{{ customer.composite_lead_score }}</div>
+          <div><span class="whatif-delta" id="whatif-delta">no change</span> vs current</div>
+          <div class="whatif-dims">
+            <div><strong id="whatif-repay">{{ customer.repayment_capacity.score }}</strong><span>Repayment</span></div>
+            <div><strong id="whatif-intent">{{ customer.purchase_intent.score }}</strong><span>Intent</span></div>
+            <div><strong id="whatif-disc">{{ customer.behavioral_discipline.score }}</strong><span>Discipline</span></div>
+          </div>
+          <p class="section-note" id="whatif-emi">Affordable EMI ₹{{ "{:,}".format(customer.affordable_emi_estimate or 0) }}/mo</p>
+        </div>
+      </div>
+      <p class="section-note">
+        Each simulation is written to the decision audit log, so a what-if an RM showed a customer is
+        reconstructable later.
+      </p>
+    </section>
 
     <section class="spend-section">
       <h2>Need vs Want vs Luxury</h2>
@@ -316,4 +538,82 @@
         <div><span>Relationship years</span><strong>{{ raw.relationship_years }}</strong></div>
       </div>
     </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const buttons = document.querySelectorAll('.lang-switch button');
+  const panes = document.querySelectorAll('.brief-pane');
+  buttons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+      panes.forEach(function (p) { p.hidden = p.dataset.lang !== btn.dataset.lang; });
+    });
+  });
+})();
+
+(function () {
+  const form = document.getElementById('whatif-form');
+  if (!form) return;
+  const result = document.getElementById('whatif-result');
+  const els = {
+    tier: document.getElementById('whatif-tier-after'),
+    score: document.getElementById('whatif-score'),
+    delta: document.getElementById('whatif-delta'),
+    repay: document.getElementById('whatif-repay'),
+    intent: document.getElementById('whatif-intent'),
+    disc: document.getElementById('whatif-disc'),
+    emi: document.getElementById('whatif-emi'),
+  };
+  const initial = new FormData(form);
+  let timer = null;
+
+  function syncReadouts() {
+    form.querySelectorAll('input[type=range]').forEach(function (input) {
+      const out = form.querySelector('.readout[data-for="' + input.dataset.key + '"]');
+      if (out) out.textContent = input.value + '%';
+    });
+  }
+
+  async function run() {
+    const body = new FormData();
+    form.querySelectorAll('input[type=range]').forEach(function (i) {
+      body.append(i.name, (parseFloat(i.value) / 100).toFixed(3));
+    });
+    form.querySelectorAll('input[type=checkbox]').forEach(function (c) {
+      if (c.checked) body.append(c.name, 'true');
+    });
+    try {
+      const res = await fetch('/api/customer/' + form.dataset.customer + '/simulate', { method: 'POST', body: body });
+      if (!res.ok) return;
+      const d = await res.json();
+      els.tier.textContent = d.after.lead_tier;
+      els.tier.className = 'tier ' + d.after.lead_tier_css;
+      els.score.textContent = d.after.composite_lead_score;
+      els.repay.textContent = d.after.repayment;
+      els.intent.textContent = d.after.intent;
+      els.disc.textContent = d.after.discipline;
+      els.emi.textContent = 'Affordable EMI \u20b9' + (d.after.affordable_emi_estimate || 0).toLocaleString('en-IN') + '/mo';
+      const delta = d.score_delta;
+      els.delta.textContent = delta === 0 ? 'no change' : (delta > 0 ? '+' : '') + delta + ' pts';
+      els.delta.className = 'whatif-delta ' + (delta > 0 ? 'pos' : delta < 0 ? 'neg' : '');
+      result.classList.toggle('tier-moved', d.tier_changed);
+    } catch (e) { /* leave the last good result on screen */ }
+  }
+
+  form.addEventListener('input', function () {
+    syncReadouts();
+    clearTimeout(timer);
+    timer = setTimeout(run, 180);
+  });
+
+  document.getElementById('whatif-reset').addEventListener('click', function () {
+    form.querySelectorAll('input[type=range]').forEach(function (i) { i.value = initial.get(i.name); });
+    form.querySelectorAll('input[type=checkbox]:not([disabled])').forEach(function (c) { c.checked = false; });
+    syncReadouts();
+    run();
+  });
+})();
+</script>
 {% endblock %}
