@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Customer View — IDBI Prospect Assist AI{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <span class="badge">What the customer sees</span>
+  <h1>Customer View</h1>
+  <p class="subtitle">
+    The same lead, from the other side of the counter. The RM surface and the customer
+    surface are deliberately different: a lead tier is an internal queue label, and no
+    part of this page may carry one.
+  </p>
+</div>
+
+<p class="insight-banner">
+  <strong>Preview.</strong> In production this reaches the customer through the bank's own
+  consented channel — the IDBI app, the Account Aggregator consent screen, SMS or email —
+  not from inside the RM portal. It is shown here so the boundary can be inspected.
+</p>
+
+<section class="panel-section">
+  <form class="filters" method="get" action="/customer-view">
+    <label>
+      Customer
+      <select name="customer_id" onchange="this.form.submit()">
+        {% for c in all_customers %}
+        <option value="{{ c.customer_id }}" {% if c.customer_id == view.customer_id %}selected{% endif %}>
+          {{ c.customer_id }} — {{ c.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <noscript><button type="submit">Show</button></noscript>
+  </form>
+</section>
+
+<section class="panel-section">
+  <h2>Your indicative eligibility</h2>
+  <p class="section-lead">
+    {{ view.name }}{% if view.city %}, {{ view.city }}{% endif %}{% if view.relationship_years %}
+    · {{ view.relationship_years }} years with IDBI{% endif %}
+  </p>
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="value">{{ view.product }}</div>
+      <div class="label">Best-fit product</div>
+      <div class="sub">Based on your account activity</div>
+    </div>
+    <div class="kpi">
+      <div class="value">{{ view.indicative_emi }}</div>
+      <div class="label">Indicative EMI</div>
+      <div class="sub">Per month, over {{ view.indicative_tenor_months }} months</div>
+    </div>
+    <div class="kpi">
+      <div class="value">{{ view.indicative_amount }}</div>
+      <div class="label">Indicative amount</div>
+      <div class="sub">Subject to assessment</div>
+    </div>
+  </div>
+  <p class="section-note">
+    This is an indication drawn from how your account has been used. It is not an offer,
+    not an approval, and not a commitment to lend.
+  </p>
+</section>
+
+<section class="panel-section">
+  <h2>In your language</h2>
+  <div class="lang-switch">
+    {% for m in view.messages %}
+    <button type="button" data-lang="{{ m.code }}" lang="{{ m.code }}"
+            aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ m.native }}</button>
+    {% endfor %}
+  </div>
+  {% for m in view.messages %}
+  <div class="brief-pane" data-lang="{{ m.code }}" lang="{{ m.code }}" {% if not loop.first %}hidden{% endif %}>
+    <p>{{ m.text }}</p>
+  </div>
+  {% endfor %}
+  <p class="section-note">
+    Translations are {{ view.review_status }} — they would not go to a customer before
+    sign-off. Written separately from the RM call scripts, which name the tier and score
+    and must never reach a customer.
+  </p>
+</section>
+
+<section class="panel-section">
+  <h2>What we never show you</h2>
+  <p class="section-lead">
+    Withheld on purpose, not by omission. A test fails the build if any of it appears here.
+  </p>
+  <div class="detail-kv wide">
+    {% for label, why in view.withheld %}
+    <div><span>{{ label }}</span><strong>{{ why }}</strong></div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel-section">
+  <h2>Your data and your rights</h2>
+  <ul class="rights-list">
+    {% for r in view.rights %}<li>{{ r }}</li>{% endfor %}
+  </ul>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Category</th><th>Why it is used</th><th>Lawful basis</th><th>How long it is kept</th></tr>
+      </thead>
+      <tbody>
+        {% for row in view.data_inventory %}
+        <tr>
+          <td><strong>{{ row.category }}</strong><br /><span class="muted-cell">{{ row.fields }}</span></td>
+          <td>{{ row.purpose }}</td>
+          <td>{{ row.lawful_basis }}</td>
+          <td>{{ row.retention }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="section-note">
+    Account Aggregator consent is explicit, purpose-limited and revocable. Withdrawing it
+    stops further fetches and the holistic income figure is dropped.
+  </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const buttons = document.querySelectorAll('.lang-switch button');
+  const panes = document.querySelectorAll('.brief-pane');
+  buttons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      buttons.forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+      panes.forEach(function (p) { p.hidden = p.dataset.lang !== btn.dataset.lang; });
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -796,6 +796,28 @@ async def api_glossary():
     return build_glossary()
 
 
+@app.get("/customer-view", response_class=HTMLResponse)
+async def customer_view_page(request: Request, customer_id: str | None = None):
+    """The customer-facing side of a lead. Carries no tier and no score."""
+    from app.customer_view import build_customer_view
+
+    target = customer_id or HERO_CUSTOMERS["multibank_uplift"]
+    raw = _find_customer(target)
+    if not raw:
+        return RedirectResponse(url="/customer-view", status_code=302)
+
+    profile = get_scored_profile(target) or score_customer(raw)
+    return templates.TemplateResponse(
+        "customer_view.html",
+        {
+            "request": request,
+            "view": build_customer_view(profile),
+            "all_customers": get_customers(),
+            "active": "customer-view",
+        },
+    )
+
+
 @app.get("/customer/{customer_id}", response_class=HTMLResponse)
 async def customer_detail(request: Request, customer_id: str):
     from app.rm_brief import generate_rm_brief

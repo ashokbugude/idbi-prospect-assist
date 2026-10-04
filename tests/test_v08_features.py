@@ -412,7 +412,7 @@ def test_navigation_is_a_single_flat_row(anon_client):
         # the evidence
         "/impact", "/governance", "/ml", "/architecture",
         # reference
-        "/differentiators", "/glossary",
+        "/customer-view", "/differentiators", "/glossary",
         # actions
         "/api/rm-queue/export", "/logout",
     ]

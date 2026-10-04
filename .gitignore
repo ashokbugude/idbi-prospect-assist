@@ -12,3 +12,8 @@ build/
 input/
 app/data/outcomes.jsonl
 app/data/audit_log.jsonl
+
+# Demo recordings — tens of MB of binary; the deck carries the hosted link instead
+docs/demo-video/*.mp4
+docs/demo-video/*.webm
+docs/demo-video/raw/
